@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "cv-maker": {
+      "command": "node",
+      "args": ["path/to/cv-maker/build/index.js"],
+      "cwd": "path/to/cv-maker",
+      "env": {
+        "DEFAULT_OUTPUT_PATH": "D:/CV",
+        "TEMP_DIR": "C:/Users/YourName/AppData/Local/Temp/cv-maker",
+        "PDF_TIMEOUT": "300000",
+        "PDF_MARGIN_TOP": "20mm",
+        "PDF_MARGIN_RIGHT": "20mm",
+        "PDF_MARGIN_BOTTOM": "20mm",
+        "PDF_MARGIN_LEFT": "20mm",
+        "PDF_BASE_FONT_SIZE": "12px",
+        "PDF_LINE_HEIGHT": "1.4",
+        "PDF_H1_FONT_SIZE": "20px",
+        "PDF_H2_FONT_SIZE": "15px",
+        "PDF_H3_FONT_SIZE": "13px",
+        "PDF_PARAGRAPH_SPACING": "8px",
+        "PDF_SECTION_SPACING": "12px"
+      }
+    }
+  }
+}
