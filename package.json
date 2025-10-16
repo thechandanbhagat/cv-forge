@@ -1,0 +1,36 @@
+{
+  "name": "cv-maker-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for generating ATS-friendly CV documents in Word format based on job requirements",
+  "main": "build/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsc && node build/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mcp",
+    "cv",
+    "resume",
+    "ats",
+    "docx",
+    "job-requirements"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/markdown-it": "^14.1.2",
+    "docx": "^8.5.0",
+    "dotenv": "^17.2.3",
+    "markdown-it": "^14.1.0",
+    "md-to-pdf": "^5.2.4",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.21",
+    "typescript": "^5.0.0"
+  }
+}
