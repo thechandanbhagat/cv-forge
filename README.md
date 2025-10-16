@@ -15,7 +15,21 @@ An intelligent MCP (Model Context Protocol) server that analyzes job postings an
 
 ## Installation
 
-1. Clone or download this repository
+### Via npm (Recommended)
+
+Install globally:
+```bash
+npm install -g cv-forge
+```
+
+Or install locally in your project:
+```bash
+npm install cv-forge
+```
+
+### From Source
+
+1. Clone this repository
 2. Install dependencies:
    ```bash
    npm install
@@ -31,9 +45,9 @@ An intelligent MCP (Model Context Protocol) server that analyzes job postings an
 
 To use this MCP server with Claude Desktop, you need to add it to your Claude configuration file.
 
-**Step 1: Build the project**
+**Step 1: Install cv-forge**
 ```bash
-npm run build
+npm install -g cv-forge
 ```
 
 **Step 2: Find your Claude Desktop config file**
@@ -42,7 +56,20 @@ npm run build
 - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 **Step 3: Add the MCP server to your config**
-Add this to your `claude_desktop_config.json` file:
+
+For global installation, add this to your `claude_desktop_config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "cv-forge": {
+      "command": "cv-forge"
+    }
+  }
+}
+```
+
+Or if installed locally, specify the full path:
 
 ```json
 {
@@ -56,12 +83,29 @@ Add this to your `claude_desktop_config.json` file:
 }
 ```
 
-**Note**: Update the path `d:/TopSecret/cv-forge` to match your actual project location.
+**Step 4: (Optional) Add environment configuration**
 
-**Step 4: Restart Claude Desktop**
+You can customize the server with environment variables:
+
+```json
+{
+  "mcpServers": {
+    "cv-forge": {
+      "command": "cv-forge",
+      "env": {
+        "DEFAULT_OUTPUT_PATH": "D:/CV",
+        "PDF_BASE_FONT_SIZE": "12px",
+        "PDF_LINE_HEIGHT": "1.4"
+      }
+    }
+  }
+}
+```
+
+**Step 5: Restart Claude Desktop**
 After adding the configuration, restart Claude Desktop application.
 
-**Step 5: Verify Connection**
+**Step 6: Verify Connection**
 In Claude Desktop, you should see the CV Forge tools available. You can ask Claude to use tools like:
 - "Parse this job posting for me"
 - "Generate a tailored CV based on my profile and this job"

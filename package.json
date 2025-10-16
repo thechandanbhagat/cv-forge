@@ -4,22 +4,51 @@
   "description": "Forge powerful, ATS-friendly CVs tailored to any job - an MCP server for intelligent CV generation",
   "main": "build/index.js",
   "type": "module",
+  "bin": {
+    "cv-forge": "build/index.js"
+  },
+  "files": [
+    "build/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "mcp",
+    "mcp-server",
+    "model-context-protocol",
     "cv",
     "resume",
     "ats",
+    "cv-generator",
+    "resume-builder",
+    "job-application",
+    "tailored-cv",
     "docx",
-    "job-requirements"
+    "pdf",
+    "markdown",
+    "claude",
+    "ai"
   ],
-  "author": "",
+  "author": "Chandan Bhagat <chandan.bhagat@outlook.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thechandanbhagat/cv-forge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thechandanbhagat/cv-forge/issues"
+  },
+  "homepage": "https://github.com/thechandanbhagat/cv-forge#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@types/markdown-it": "^14.1.2",
