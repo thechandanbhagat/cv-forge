@@ -1,7 +1,7 @@
 {
-  "name": "cv-maker-mcp-server",
+  "name": "cv-forge",
   "version": "1.0.0",
-  "description": "MCP server for generating ATS-friendly CV documents in Word format based on job requirements",
+  "description": "Forge powerful, ATS-friendly CVs tailored to any job - an MCP server for intelligent CV generation",
   "main": "build/index.js",
   "type": "module",
   "scripts": {

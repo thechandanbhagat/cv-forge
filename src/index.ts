@@ -55,7 +55,7 @@ function getDefaultOutputPath(): string {
 }
 
 const server = new McpServer({
-  name: "cv-maker-server",
+  name: "cv-forge",
   version: "1.0.0"
 }, {
   capabilities: {

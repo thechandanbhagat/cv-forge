@@ -1,9 +1,9 @@
 {
   "mcpServers": {
-    "cv-maker": {
+    "cv-forge": {
       "command": "node",
-      "args": ["path/to/cv-maker/build/index.js"],
-      "cwd": "path/to/cv-maker",
+      "args": ["path/to/cv-forge/build/index.js"],
+      "cwd": "path/to/cv-forge",
       "env": {
         "DEFAULT_OUTPUT_PATH": "D:/CV",
         "TEMP_DIR": "C:/Users/YourName/AppData/Local/Temp/cv-maker",

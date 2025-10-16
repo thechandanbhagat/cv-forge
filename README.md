@@ -1,6 +1,8 @@
-# CV Maker MCP Server
+# CV Forge
 
-A Node.js MCP (Model Context Protocol) server for generating ATS-friendly CV documents based on job requirements.
+Forge powerful, ATS-friendly CVs tailored to any job requirement.
+
+An intelligent MCP (Model Context Protocol) server that analyzes job postings and crafts perfectly-matched CVs.
 
 ## Features
 
@@ -45,25 +47,25 @@ Add this to your `claude_desktop_config.json` file:
 ```json
 {
   "mcpServers": {
-    "cv-maker": {
+    "cv-forge": {
       "command": "node",
-      "args": ["d:/TopSecret/cv-maker/build/index.js"],
-      "cwd": "d:/TopSecret/cv-maker"
+      "args": ["d:/TopSecret/cv-forge/build/index.js"],
+      "cwd": "d:/TopSecret/cv-forge"
     }
   }
 }
 ```
 
-**Note**: Update the path `d:/TopSecret/cv-maker` to match your actual project location.
+**Note**: Update the path `d:/TopSecret/cv-forge` to match your actual project location.
 
 **Step 4: Restart Claude Desktop**
 After adding the configuration, restart Claude Desktop application.
 
 **Step 5: Verify Connection**
-In Claude Desktop, you should see the CV maker tools available. You can ask Claude to use tools like:
+In Claude Desktop, you should see the CV Forge tools available. You can ask Claude to use tools like:
 - "Parse this job posting for me"
 - "Generate a tailored CV based on my profile and this job"
-- "Save my CV as a text file"
+- "Save my CV as a PDF file"
 
 ### Running the MCP Server Standalone (for testing)
 
@@ -217,10 +219,10 @@ The MCP server supports various configuration options via environment variables 
 ```json
 {
   "mcpServers": {
-    "cv-maker": {
+    "cv-forge": {
       "command": "node",
-      "args": ["path/to/cv-maker/build/index.js"],
-      "cwd": "path/to/cv-maker",
+      "args": ["path/to/cv-forge/build/index.js"],
+      "cwd": "path/to/cv-forge",
       "env": {
         "DEFAULT_OUTPUT_PATH": "D:/CV",
         "TEMP_DIR": "C:/Users/YourName/AppData/Local/Temp/cv-maker",
@@ -395,7 +397,7 @@ If you want to use the tools directly (advanced usage):
 ## File Structure
 
 ```
-cv-maker/
+cv-forge/
 ├── src/
 │   ├── index.ts                    # Main MCP server
 │   └── lib/
