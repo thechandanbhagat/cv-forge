@@ -157,16 +157,16 @@ Saves CV content as a formatted text file.
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "generated_cv"
 
-#### 4. `generate_and_save_cv_pdf` ⭐ **Recommended**
+#### 4. `generate_and_save_cv_pdf` (Recommended)
 Generate tailored CV and save directly as professional PDF (combines CV generation and PDF creation in one step).
 
 **Parameters:**
 - `userProfile` (object, required): Complete user profile information
 - `jobRequirements` (object, required): Job requirements object
-- `outputPath` (string, required): Directory path where the CV should be saved
+- `outputPath` (string, optional): Directory path where the CV should be saved (uses DEFAULT_OUTPUT_PATH if not provided)
 - `fileName` (string, optional): Custom filename (without extension), defaults to "professional_cv"
 
-#### 5. `generate_and_save_cv_markdown` ⭐ **Recommended**
+#### 5. `generate_and_save_cv_markdown` (Recommended)
 Generate tailored CV and save directly as Markdown (combines CV generation and Markdown creation in one step).
 
 **Parameters:**
@@ -175,7 +175,7 @@ Generate tailored CV and save directly as Markdown (combines CV generation and M
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "cv_markdown"
 
-#### 6. `generate_and_save_cv_html` ⭐ **Recommended**
+#### 6. `generate_and_save_cv_html` (Recommended)
 Generate tailored CV and save directly as HTML (combines CV generation and HTML creation in one step).
 
 **Parameters:**
@@ -207,6 +207,54 @@ Generate CV as styled HTML document from pre-generated CV data.
 - `cvData` (object, required): Tailored CV data object (from generate_cv_data)
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "cv_web"
+
+## Configuration
+
+### Environment Variables
+
+The MCP server supports various configuration options via environment variables in the Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "cv-maker": {
+      "command": "node",
+      "args": ["path/to/cv-maker/build/index.js"],
+      "cwd": "path/to/cv-maker",
+      "env": {
+        "DEFAULT_OUTPUT_PATH": "D:/CV",
+        "TEMP_DIR": "C:/Users/YourName/AppData/Local/Temp/cv-maker",
+        "PDF_TIMEOUT": "300000",
+        "PDF_MARGIN_TOP": "20mm",
+        "PDF_MARGIN_RIGHT": "20mm",
+        "PDF_MARGIN_BOTTOM": "20mm",
+        "PDF_MARGIN_LEFT": "20mm",
+        "PDF_BASE_FONT_SIZE": "12px",
+        "PDF_LINE_HEIGHT": "1.4",
+        "PDF_H1_FONT_SIZE": "20px",
+        "PDF_H2_FONT_SIZE": "15px",
+        "PDF_H3_FONT_SIZE": "13px",
+        "PDF_PARAGRAPH_SPACING": "8px",
+        "PDF_SECTION_SPACING": "12px"
+      }
+    }
+  }
+}
+```
+
+**Configuration Options:**
+
+- `DEFAULT_OUTPUT_PATH`: Default directory for saving CV files (when outputPath is not provided or is "./")
+- `TEMP_DIR`: Directory for temporary files during PDF generation
+- `PDF_TIMEOUT`: Timeout for PDF generation in milliseconds
+- `PDF_MARGIN_*`: PDF page margins (top, right, bottom, left)
+- `PDF_BASE_FONT_SIZE`: Base font size for CV body text (12px ≈ MS Word 9pt, 13px ≈ 10pt)
+- `PDF_LINE_HEIGHT`: Line height for text (1.4 recommended for compact layout)
+- `PDF_H1_FONT_SIZE`: Font size for name/title heading
+- `PDF_H2_FONT_SIZE`: Font size for section headings
+- `PDF_H3_FONT_SIZE`: Font size for job titles and subsections
+- `PDF_PARAGRAPH_SPACING`: Spacing between paragraphs
+- `PDF_SECTION_SPACING`: Spacing between major sections
 
 ## Example Usage with Claude Desktop
 
@@ -349,15 +397,17 @@ If you want to use the tools directly (advanced usage):
 ```
 cv-maker/
 ├── src/
-│   ├── index.ts              # Main MCP server
+│   ├── index.ts                    # Main MCP server
 │   └── lib/
-│       ├── job-parser.ts     # Job requirement parsing logic
-│       ├── cv-generator.ts   # CV tailoring algorithms
-│       └── word-generator.ts # Word document generation (future)
-├── dist/                     # Compiled JavaScript files
-├── package.json              # Project configuration
-├── tsconfig.json            # TypeScript configuration
-└── README.md                # This file
+│       ├── job-parser.ts           # Job requirement parsing logic
+│       ├── cv-generator.ts         # CV tailoring algorithms
+│       ├── document-generator.ts   # Multi-format document generation
+│       └── word-generator.ts       # Word document generation (future)
+├── build/                          # Compiled JavaScript files
+├── package.json                    # Project configuration
+├── tsconfig.json                   # TypeScript configuration
+├── claude_desktop_config.example.json  # Example configuration
+└── README.md                       # This file
 ```
 
 ## Development
@@ -376,16 +426,35 @@ npm run dev
 - `src/index.ts`: Main MCP server with tool registration
 - `src/lib/job-parser.ts`: Parses job requirements and extracts key information
 - `src/lib/cv-generator.ts`: Generates tailored CV content based on job requirements
+- `src/lib/document-generator.ts`: Multi-format document generation (PDF, HTML, Markdown)
 - `src/lib/word-generator.ts`: (Future) Word document generation functionality
+
+## Troubleshooting
+
+### PDF not saving to configured location
+- Ensure `DEFAULT_OUTPUT_PATH` is set in your Claude Desktop config
+- Restart Claude Desktop after changing configuration
+- Check that the path exists or the application has permission to create it
+
+### Font size too large or small
+- Adjust `PDF_BASE_FONT_SIZE` in environment variables (12px ≈ 9pt, 13px ≈ 10pt MS Word)
+- Modify `PDF_LINE_HEIGHT` for tighter/looser spacing
+- Restart Claude Desktop after changes
+
+### PDF generation fails
+- Check that output directory exists and is writable
+- Verify `TEMP_DIR` path is valid
+- Ensure sufficient disk space
 
 ## Future Enhancements
 
-- Word document generation with proper formatting
+- Enhanced Word document generation with advanced formatting
 - Multiple CV templates (modern, classic, minimal)
-- PDF export capabilities
-- Advanced keyword optimization
+- Advanced keyword optimization algorithms
 - Integration with job boards for automatic job parsing
 - Template customization options
+- Cover letter generation
+- Multi-language support
 
 ## Dependencies
 
