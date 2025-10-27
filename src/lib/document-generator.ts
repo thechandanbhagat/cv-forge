@@ -287,11 +287,22 @@ export function formatCVAsHTML(cvData: any): string {
 /**
  * Generate CV document in specified format
  */
+export interface PDFOptions {
+  pageSize?: string;
+  margins?: {
+    top?: string;
+    right?: string;
+    bottom?: string;
+    left?: string;
+  };
+}
+
 export async function generateDocument(
   cvData: any,
   outputPath: string,
   fileName: string,
-  format: OutputFormat = OutputFormat.PDF
+  format: OutputFormat = OutputFormat.PDF,
+  pdfOptions?: PDFOptions
 ): Promise<string> {
   // Ensure output directory exists
   await fs.mkdir(outputPath, { recursive: true });
@@ -405,19 +416,26 @@ export async function generateDocument(
         
         console.error(`[DEBUG document-generator] About to call mdToPdf with dest: ${filePath}`);
         
+        // Get page size and margins from options or environment variables
+        const pageSize = pdfOptions?.pageSize || process.env.PDF_PAGE_SIZE || 'A4';
+        const margins = {
+          top: pdfOptions?.margins?.top || process.env.PDF_MARGIN_TOP || '10mm',
+          right: pdfOptions?.margins?.right || process.env.PDF_MARGIN_RIGHT || '10mm',
+          bottom: pdfOptions?.margins?.bottom || process.env.PDF_MARGIN_BOTTOM || '10mm',
+          left: pdfOptions?.margins?.left || process.env.PDF_MARGIN_LEFT || '10mm'
+        };
+
+        console.error(`[DEBUG document-generator] Using page size: ${pageSize}`);
+        console.error(`[DEBUG document-generator] Using margins: ${JSON.stringify(margins)}`);
+
         // Generate PDF with the temporary CSS file
         const pdf = await mdToPdf(
           { content: markdown },
           {
             dest: filePath,
             pdf_options: {
-              format: 'A4',
-              margin: {
-                top: process.env.PDF_MARGIN_TOP || '20mm',
-                right: process.env.PDF_MARGIN_RIGHT || '20mm',
-                bottom: process.env.PDF_MARGIN_BOTTOM || '20mm',
-                left: process.env.PDF_MARGIN_LEFT || '20mm'
-              },
+              format: pageSize as any,
+              margin: margins,
               printBackground: true
             },
             launch_options: {

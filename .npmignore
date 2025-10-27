@@ -32,3 +32,5 @@ coverage/
 # Temporary
 *.tmp
 *.temp
+
+mcp-publisher*

@@ -6,13 +6,16 @@ An intelligent MCP (Model Context Protocol) server that analyzes job postings an
 
 ## Features
 
-- **Parse Job Requirements**: Extract key skills and qualifications from job postings
+- **Parse Job Requirements**: Extract key skills, qualifications, email addresses, and hiring manager names from job postings
 - **Generate Tailored CVs**: Create customized CV content based on user profile and job requirements
+- **Cover Letter Generation**: Generate personalized cover letters tailored to specific job applications
+- **Email Template Creation**: Create professional email templates with automatic email address detection
+- **Complete Application Packages**: Generate CV, cover letter, and email template in one command
 - **PDF by Default**: Automatically generates professional PDF documents when no format is specified
-- **Multiple Output Formats**: Generate CVs in PDF (default), HTML, Markdown, and text formats
+- **Multiple Output Formats**: Generate documents in PDF (default), HTML, Markdown, and text formats
 - **Professional PDF Generation**: Create publication-ready PDF documents with professional styling
 - **ATS-Friendly**: Optimized for Applicant Tracking Systems with proper keyword placement
-- **Markdown Support**: Generate CVs in Markdown for easy editing and version control
+- **Smart Contact Extraction**: Automatically extracts email addresses and hiring manager names from job descriptions
 
 ## Installation
 
@@ -211,8 +214,10 @@ Generate tailored CV and save to specified location or default folder. **Default
 - `userProfile` (object, required): Complete user profile information
 - `jobRequirements` (object, required): Job requirements object
 - `outputPath` (string, optional): Directory path where the CV should be saved (uses DEFAULT_OUTPUT_PATH if not provided)
-- `fileName` (string, optional): Custom filename (without extension), defaults for "professional_cv"
+- `fileName` (string, optional): Custom filename (without extension), defaults to "professional_cv"
 - `format` (string, optional): Output format - "pdf" (default), "html", or "markdown"
+- `pageSize` (string, optional): PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided
+- `margins` (object, optional): PDF margins with top, right, bottom, left properties (e.g., '10mm', '0.8in') - uses PDF_MARGIN_* env vars if not provided
 
 #### 5. `generate_and_save_cv_pdf` (Legacy - Use generate_cv instead)
 Generate tailored CV and save directly as professional PDF (combines CV generation and PDF creation in one step).
@@ -265,6 +270,49 @@ Generate CV as styled HTML document from pre-generated CV data.
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "cv_web"
 
+### Cover Letter and Email Template Tools
+
+#### 11. `generate_cover_letter` (Recommended)
+Generate a tailored cover letter for a specific job application. Returns formatted text that can be displayed on screen or saved as PDF.
+
+**Parameters:**
+- `userProfile` (object, required): Complete user profile information
+- `jobRequirements` (object, required): Job requirements object
+- `hiringManagerName` (string, optional): Name of the hiring manager if known
+- `format` (string, optional): Output format - "text" (default) for on-screen display, "html" for styled viewing
+
+#### 12. `save_cover_letter_pdf`
+Generate and save a cover letter as PDF to specified location. Automatically extracts email addresses and hiring manager names from job descriptions.
+
+**Parameters:**
+- `userProfile` (object, required): Complete user profile information
+- `jobRequirements` (object, required): Job requirements object
+- `outputPath` (string, optional): Directory path where the cover letter should be saved
+- `fileName` (string, optional): Custom filename (without extension), defaults to "cover_letter"
+- `hiringManagerName` (string, optional): Name of the hiring manager if known
+- `pageSize` (string, optional): PDF page size (e.g., 'A4', 'Letter', 'Legal')
+- `margins` (object, optional): PDF margins with top, right, bottom, left properties
+
+#### 13. `generate_email_template`
+Generate a professional email template for job application. Automatically detects email addresses from job description.
+
+**Parameters:**
+- `userProfile` (object, required): Complete user profile information
+- `jobRequirements` (object, required): Job requirements object
+- `templateType` (string, optional): Type of email template - "application" (default), "follow_up", "inquiry", "thank_you"
+- `recipientEmail` (string, optional): Recipient email address (optional, will use extracted email from job description if available)
+- `hiringManagerName` (string, optional): Name of the hiring manager if known
+
+#### 14. `draft_complete_application` (Recommended - One-Stop Solution)
+Draft a complete job application package: CV, cover letter, and email template. Automatically generates PDF CV and cover letter, plus email template if email address is found in the job description.
+
+**Parameters:**
+- `userProfile` (object, required): Complete user profile information
+- `jobRequirements` (object, required): Job requirements object
+- `outputPath` (string, optional): Directory path where files should be saved
+- `baseFileName` (string, optional): Base filename for generated files (without extension), defaults to "job_application"
+- `hiringManagerName` (string, optional): Name of the hiring manager if known
+
 ## Configuration
 
 ### Environment Variables
@@ -282,10 +330,11 @@ The MCP server supports various configuration options via environment variables 
         "DEFAULT_OUTPUT_PATH": "D:/CV",
         "TEMP_DIR": "C:/Users/YourName/AppData/Local/Temp/cv-maker",
         "PDF_TIMEOUT": "300000",
-        "PDF_MARGIN_TOP": "20mm",
-        "PDF_MARGIN_RIGHT": "20mm",
-        "PDF_MARGIN_BOTTOM": "20mm",
-        "PDF_MARGIN_LEFT": "20mm",
+        "PDF_PAGE_SIZE": "A4",
+        "PDF_MARGIN_TOP": "10mm",
+        "PDF_MARGIN_RIGHT": "10mm",
+        "PDF_MARGIN_BOTTOM": "10mm",
+        "PDF_MARGIN_LEFT": "10mm",
         "PDF_BASE_FONT_SIZE": "12px",
         "PDF_LINE_HEIGHT": "1.4",
         "PDF_H1_FONT_SIZE": "20px",
@@ -304,7 +353,9 @@ The MCP server supports various configuration options via environment variables 
 - `DEFAULT_OUTPUT_PATH`: Default directory for saving CV files (when outputPath is not provided or is "./")
 - `TEMP_DIR`: Directory for temporary files during PDF generation
 - `PDF_TIMEOUT`: Timeout for PDF generation in milliseconds
-- `PDF_MARGIN_*`: PDF page margins (top, right, bottom, left)
+- `PDF_PAGE_SIZE`: Default PDF page size - defaults to 'A4'
+  - Common sizes: 'A4' (210×297mm), 'Letter' (8.5×11in), 'Legal' (8.5×14in)
+- `PDF_MARGIN_*`: PDF page margins (top, right, bottom, left) - defaults to '10mm'
 - `PDF_BASE_FONT_SIZE`: Base font size for CV body text (12px ≈ MS Word 9pt, 13px ≈ 10pt)
 - `PDF_LINE_HEIGHT`: Line height for text (1.4 recommended for compact layout)
 - `PDF_H1_FONT_SIZE`: Font size for name/title heading
@@ -362,7 +413,37 @@ Save them all to C:\Users\John\Documents\CVs with the base filename 'john_doe_cv
 "Generate my CV in HTML format and save it to C:\Users\John\Documents\CVs"
 ```
 
-### 3. Direct Tool Usage Examples
+**Or specify custom page size and margins for PDF:**
+```
+"Generate my CV as a PDF with Letter page size and 1 inch margins on all sides, save it to C:\Users\John\Documents\CVs"
+```
+
+### 3. Generate Cover Letters
+```
+"Generate a cover letter for the Senior Software Engineer position at TechCorp Inc. The job description mentions the hiring manager is Sarah Johnson and applications should be sent to careers@techcorp.com."
+```
+
+### 4. Generate Email Templates
+```
+"Create an email template for applying to the Senior Software Engineer position at TechCorp Inc. The job posting includes the email careers@techcorp.com and mentions Sarah Johnson as the hiring manager."
+```
+
+### 5. Draft Complete Application Package (Recommended)
+```
+"Draft a complete job application package for the Senior Software Engineer position at TechCorp Inc. Include CV, cover letter, and email template. Save everything to C:\Users\John\Documents\Applications with the base filename 'techcorp_application'."
+```
+
+**This will generate:**
+- `techcorp_application_CV.pdf` - Tailored CV
+- `techcorp_application_Cover_Letter.pdf` - Professional cover letter
+- `techcorp_application_Email_Template.txt` - Email template (if email address found in job description)
+
+### 6. Generate Follow-up Email Template
+```
+"Generate a follow-up email template for the Senior Software Engineer position I applied to at TechCorp Inc last week."
+```
+
+### 7. Direct Tool Usage Examples
 If you want to use the tools directly (advanced usage):
 
 1. **Parse a job posting:**
@@ -488,8 +569,10 @@ npm run dev
 
 ### Project Structure
 - `src/index.ts`: Main MCP server with tool registration
-- `src/lib/job-parser.ts`: Parses job requirements and extracts key information
+- `src/lib/job-parser.ts`: Parses job requirements, extracts key information, emails, and hiring manager names
 - `src/lib/cv-generator.ts`: Generates tailored CV content based on job requirements
+- `src/lib/cover-letter-generator.ts`: Generates personalized cover letters for job applications
+- `src/lib/email-template-generator.ts`: Creates professional email templates for various application scenarios
 - `src/lib/document-generator.ts`: Multi-format document generation (PDF, HTML, Markdown)
 - `src/lib/word-generator.ts`: (Future) Word document generation functionality
 
@@ -510,15 +593,27 @@ npm run dev
 - Verify `TEMP_DIR` path is valid
 - Ensure sufficient disk space
 
+### Custom page size not working
+- Ensure page size is a valid format (A4, Letter, Legal, A3, A5, etc.)
+- Check that the page size is supported by the PDF generator
+- Use standard page size names (case-sensitive)
+
+### Custom margins not applied
+- Use proper units: 'mm', 'cm', 'in', 'px', 'pt'
+- Example: '10mm', '0.8in', '72pt'
+- Restart Claude Desktop after changing environment variables
+
 ## Future Enhancements
 
 - Enhanced Word document generation with advanced formatting
-- Multiple CV templates (modern, classic, minimal)
+- Multiple CV and cover letter templates (modern, classic, minimal)
 - Advanced keyword optimization algorithms
 - Integration with job boards for automatic job parsing
-- Template customization options
-- Cover letter generation
-- Multi-language support
+- LinkedIn profile integration for automatic profile data
+- Interview preparation questions based on job requirements
+- Salary negotiation guidance based on market data
+- Multi-language support for international applications
+- AI-powered writing suggestions and improvements
 
 ## Dependencies
 

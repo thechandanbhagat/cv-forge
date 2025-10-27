@@ -60,17 +60,8 @@ export function generateTailoredCV(
     jobRequirements.keySkills
   );
   
-  // Tailor experience descriptions to highlight relevant achievements
-  const tailoredExperience = userProfile.experience.map(exp => ({
-    jobTitle: exp.jobTitle,
-    company: exp.company,
-    location: exp.location,
-    duration: formatDuration(exp.startDate, exp.endDate),
-    description: tailorExperienceDescription(exp.description, jobRequirements),
-    achievements: exp.achievements?.map(achievement => 
-      tailorAchievement(achievement, jobRequirements)
-    ) || []
-  }));
+  // Group and tailor experience to handle multiple roles at same company
+  const tailoredExperience = groupAndTailorExperience(userProfile.experience, jobRequirements);
   
   // Filter and prioritize projects
   const relevantProjects = userProfile.projects
@@ -185,12 +176,132 @@ function tailorAchievement(achievement: string, jobReq: ParsedJobRequirements): 
  */
 function formatDuration(startDate: string, endDate?: string): string {
   const start = new Date(startDate);
-  const end = endDate ? new Date(endDate) : new Date();
+  
+  // Check if startDate is valid
+  if (isNaN(start.getTime())) {
+    return 'Invalid start date';
+  }
   
   const startMonth = start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  const endMonth = endDate ? 
-    end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 
-    'Present';
   
+  // Check if endDate is provided and valid
+  if (!endDate || endDate.trim() === '' || endDate.toLowerCase() === 'present') {
+    return `${startMonth} - Present`;
+  }
+  
+  const end = new Date(endDate);
+  
+  // Check if endDate is valid
+  if (isNaN(end.getTime())) {
+    return `${startMonth} - Present`;
+  }
+  
+  const endMonth = end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   return `${startMonth} - ${endMonth}`;
+}
+
+/**
+ * Group multiple roles at the same company and tailor experience
+ */
+function groupAndTailorExperience(
+  experiences: UserProfile['experience'], 
+  jobRequirements: ParsedJobRequirements
+): TailoredCV['experience'] {
+  // Group experiences by company
+  const companiesMap = new Map<string, UserProfile['experience']>();
+  
+  experiences.forEach(exp => {
+    const company = exp.company.trim();
+    if (!companiesMap.has(company)) {
+      companiesMap.set(company, []);
+    }
+    companiesMap.get(company)!.push(exp);
+  });
+  
+  const tailoredExperience: TailoredCV['experience'] = [];
+  
+  // Process each company
+  companiesMap.forEach((companyExperiences, company) => {
+    // Sort by start date (most recent first)
+    companyExperiences.sort((a, b) => {
+      const dateA = new Date(a.startDate);
+      const dateB = new Date(b.startDate);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    if (companyExperiences.length === 1) {
+      // Single role at company - process normally
+      const exp = companyExperiences[0];
+      tailoredExperience.push({
+        jobTitle: exp.jobTitle,
+        company: exp.company,
+        location: exp.location,
+        duration: formatDuration(exp.startDate, exp.endDate),
+        description: tailorExperienceDescription(exp.description, jobRequirements),
+        achievements: exp.achievements?.map(achievement => 
+          tailorAchievement(achievement, jobRequirements)
+        ) || []
+      });
+    } else {
+      // Multiple roles at same company - consolidate
+      const mostRecentRole = companyExperiences[0];
+      const earliestRole = companyExperiences[companyExperiences.length - 1];
+      
+      // Create consolidated title showing progression
+      const allTitles = companyExperiences.map(exp => exp.jobTitle).reverse();
+      const consolidatedTitle = allTitles.length > 2 
+        ? `${mostRecentRole.jobTitle} (Previously: ${allTitles.slice(0, -1).join(', ')})`
+        : `${mostRecentRole.jobTitle} (Previously: ${allTitles.slice(0, -1).join(', ')})`;
+      
+      // Calculate total duration from earliest start to most recent end
+      const totalDuration = formatDuration(earliestRole.startDate, mostRecentRole.endDate);
+      
+      // Combine descriptions and achievements from all roles
+      const allDescriptions = companyExperiences
+        .map(exp => tailorExperienceDescription(exp.description, jobRequirements))
+        .filter(desc => desc.trim().length > 0);
+      
+      const consolidatedDescription = allDescriptions.length > 1
+        ? `Career progression through multiple roles: ${allDescriptions.join(' ')}`
+        : allDescriptions[0] || '';
+      
+      // Collect all achievements from all roles (remove duplicates)
+      const allAchievements = new Set<string>();
+      companyExperiences.forEach(exp => {
+        exp.achievements?.forEach(achievement => {
+          const tailored = tailorAchievement(achievement, jobRequirements);
+          if (tailored.trim().length > 0) {
+            allAchievements.add(tailored);
+          }
+        });
+      });
+      
+      // Add role progression summary as first achievement
+      const roleProgressionSummary = `Progressed through ${companyExperiences.length} roles: ${companyExperiences.map(exp => 
+        `${exp.jobTitle} (${formatDuration(exp.startDate, exp.endDate)})`
+      ).reverse().join(' → ')}`;
+      
+      tailoredExperience.push({
+        jobTitle: consolidatedTitle,
+        company: company,
+        location: mostRecentRole.location,
+        duration: totalDuration,
+        description: consolidatedDescription,
+        achievements: [roleProgressionSummary, ...Array.from(allAchievements)]
+      });
+    }
+  });
+  
+  // Sort final experience by most recent start date
+  tailoredExperience.sort((a, b) => {
+    // For consolidated roles, we'll use a heuristic based on the duration string
+    const extractYear = (duration: string) => {
+      const match = duration.match(/(\d{4})/g);
+      return match ? Math.max(...match.map(Number)) : 0;
+    };
+    
+    return extractYear(b.duration) - extractYear(a.duration);
+  });
+  
+  return tailoredExperience;
 }

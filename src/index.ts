@@ -18,8 +18,20 @@ import {
   generateDocument, 
   formatCVAsMarkdown,
   OutputFormat,
-  type CVData 
+  type CVData,
+  type PDFOptions 
 } from "./lib/document-generator.js";
+import { 
+  generateCoverLetter, 
+  formatCoverLetterAsText, 
+  formatCoverLetterAsHTML,
+  type CoverLetterData 
+} from "./lib/cover-letter-generator.js";
+import { 
+  generateEmailTemplate, 
+  EmailTemplateType,
+  type EmailTemplateData 
+} from "./lib/email-template-generator.js";
 
 /**
  * CV Maker MCP Server
@@ -157,12 +169,19 @@ server.registerTool(
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
-      fileName: z.string().optional().describe("Custom filename (without extension)")
+      fileName: z.string().optional().describe("Custom filename (without extension)"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, fileName = "professional_cv" } = args;
+      const { userProfile, jobRequirements, fileName = "professional_cv", pageSize, margins } = args;
       // Use default path if outputPath is not provided, is "./" or is empty
       const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
         ? args.outputPath 
@@ -177,12 +196,19 @@ server.registerTool(
       // Generate tailored CV
       const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
       
+      // Prepare PDF options
+      const pdfOptions: PDFOptions = {
+        pageSize,
+        margins
+      };
+
       // Generate PDF directly
       const filePath = await generateDocument(
         tailoredCV,
         outputPath,
         fileName,
-        OutputFormat.PDF
+        OutputFormat.PDF,
+        pdfOptions
       );
       
       return {
@@ -260,18 +286,32 @@ server.registerTool(
     inputSchema: {
       cvData: z.any().describe("Tailored CV data object"),
       outputPath: z.string().describe("Directory path where the CV should be saved"),
-      fileName: z.string().optional().describe("Custom filename (without extension)")
+      fileName: z.string().optional().describe("Custom filename (without extension)"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { cvData, outputPath, fileName = "professional_cv" } = args;
+      const { cvData, outputPath, fileName = "professional_cv", pageSize, margins } = args;
       
+      // Prepare PDF options
+      const pdfOptions: PDFOptions = {
+        pageSize,
+        margins
+      };
+
       const filePath = await generateDocument(
         cvData,
         outputPath,
         fileName,
-        OutputFormat.PDF
+        OutputFormat.PDF,
+        pdfOptions
       );
       
       return {
@@ -483,18 +523,25 @@ server.registerTool(
 server.registerTool(
   "generate_cv",
   {
-    description: "Generate tailored CV and save to specified location or default folder. Defaults to PDF format if no format is specified.",
+    description: "Generate tailored CV in PDF format and save to specified location or default folder. Always generates PDF unless a different format is explicitly requested.",
     inputSchema: {
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
       fileName: z.string().optional().describe("Custom filename (without extension)"),
-      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)")
+      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format - automatically set to PDF, only specify if you want HTML or Markdown instead"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf" } = args;
+      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf", pageSize, margins } = args;
       
       // Use provided path or default path if outputPath is not provided, is "./" or is empty
       const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
@@ -524,12 +571,19 @@ server.registerTool(
           outputFormat = OutputFormat.PDF;
       }
       
+      // Prepare PDF options if generating PDF
+      const pdfOptions: PDFOptions | undefined = format === "pdf" ? {
+        pageSize,
+        margins
+      } : undefined;
+
       // Generate document
       const filePath = await generateDocument(
         tailoredCV,
         outputPath,
         fileName,
-        outputFormat
+        outputFormat,
+        pdfOptions
       );
       
       return {
@@ -561,12 +615,19 @@ server.registerTool(
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       fileName: z.string().optional().describe("Custom filename (without extension)"),
-      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)")
+      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf" } = args;
+      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf", pageSize, margins } = args;
       
       // Use default output path from environment or fallback
       const outputPath = getDefaultOutputPath();
@@ -590,12 +651,19 @@ server.registerTool(
           outputFormat = OutputFormat.PDF;
       }
       
+      // Prepare PDF options if generating PDF
+      const pdfOptions: PDFOptions | undefined = format === "pdf" ? {
+        pageSize,
+        margins
+      } : undefined;
+
       // Generate document
       const filePath = await generateDocument(
         tailoredCV,
         outputPath,
         fileName,
-        outputFormat
+        outputFormat,
+        pdfOptions
       );
       
       return {
@@ -744,6 +812,417 @@ function formatCVAsText(cvData: any): string {
   
   return text;
 }
+
+// Add a dedicated tool for drafting CVs that always generates PDF
+server.registerTool(
+  "draft_cv_pdf",
+  {
+    description: "Draft a tailored CV in PDF format for a specific job. This tool automatically generates a professional PDF CV without asking for format preferences.",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
+      fileName: z.string().optional().describe("Custom filename (without extension)")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, fileName = "professional_cv" } = args;
+      
+      // Use provided path or default path
+      const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
+        ? args.outputPath 
+        : getDefaultOutputPath();
+      
+      console.error(`[DEBUG draft_cv_pdf] Using outputPath: ${outputPath}`);
+      
+      // Parse job requirements
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Generate tailored CV
+      const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
+      
+      // Generate PDF document
+      const filePath = await generateDocument(
+        tailoredCV,
+        outputPath,
+        fileName,
+        OutputFormat.PDF
+      );
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ CV successfully generated and saved to: ${filePath}\n\nThe CV has been tailored for the ${parsedJobReq.jobTitle} position at ${parsedJobReq.company} and saved as a professional PDF document.`
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Error in draft_cv_pdf:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error generating CV: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Cover Letter Generation Tools
+server.registerTool(
+  "generate_cover_letter",
+  {
+    description: "Generate a tailored cover letter for a specific job application. Returns formatted text that can be displayed on screen or saved as PDF.",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      hiringManagerName: z.string().optional().describe("Name of the hiring manager if known"),
+      format: z.enum(["text", "html"]).optional().default("text").describe("Output format (text for on-screen display, html for styled viewing)")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, hiringManagerName, format = "text" } = args;
+      
+      // Parse job requirements to extract email addresses
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Use extracted hiring manager name if not provided
+      const managerName = hiringManagerName || parsedJobReq.hiringManagerName;
+      const emailAddress = parsedJobReq.contactEmails?.[0];
+      
+      // Generate cover letter
+      const coverLetter = generateCoverLetter(userProfile, parsedJobReq, managerName, emailAddress);
+      
+      // Format based on requested format
+      const formattedCoverLetter = format === "html" 
+        ? formatCoverLetterAsHTML(coverLetter)
+        : formatCoverLetterAsText(coverLetter);
+      
+      let successMessage = `✅ Cover letter successfully generated for ${parsedJobReq.jobTitle} position at ${parsedJobReq.company}`;
+      
+      if (emailAddress) {
+        successMessage += `\n📧 Email address found: ${emailAddress}`;
+      }
+      if (managerName) {
+        successMessage += `\n👤 Hiring manager: ${managerName}`;
+      }
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${successMessage}\n\n--- COVER LETTER ---\n\n${formattedCoverLetter}`
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Error generating cover letter:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error generating cover letter: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+server.registerTool(
+  "save_cover_letter_pdf",
+  {
+    description: "Generate and save a cover letter as PDF to specified location",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      outputPath: z.string().optional().describe("Directory path where the cover letter should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
+      fileName: z.string().optional().describe("Custom filename (without extension)"),
+      hiringManagerName: z.string().optional().describe("Name of the hiring manager if known"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, fileName = "cover_letter", hiringManagerName, pageSize, margins } = args;
+      
+      // Use provided path or default path
+      const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
+        ? args.outputPath 
+        : getDefaultOutputPath();
+      
+      // Parse job requirements
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Use extracted hiring manager name if not provided
+      const managerName = hiringManagerName || parsedJobReq.hiringManagerName;
+      const emailAddress = parsedJobReq.contactEmails?.[0];
+      
+      // Generate cover letter
+      const coverLetter = generateCoverLetter(userProfile, parsedJobReq, managerName, emailAddress);
+      
+      // Convert to HTML for PDF generation
+      const htmlContent = formatCoverLetterAsHTML(coverLetter);
+      
+      // Create a temporary HTML file for PDF conversion
+      const tempHtmlPath = path.join(require('os').tmpdir(), `cover-letter-${Date.now()}.html`);
+      await fs.writeFile(tempHtmlPath, htmlContent, 'utf-8');
+      
+      // Prepare PDF options
+      const pdfOptions: PDFOptions = {
+        pageSize,
+        margins
+      };
+      
+      // Create a minimal cover letter data structure for the document generator
+      const coverLetterForPdf = {
+        personalInfo: coverLetter.personalInfo,
+        summary: formatCoverLetterAsText(coverLetter),
+        experience: [],
+        education: [],
+        skills: { technical: [] }
+      };
+      
+      // Generate PDF using existing document generator with markdown content
+      const markdownContent = `# Cover Letter\n\n${formatCoverLetterAsText(coverLetter)}`;
+      const filePath = await generateDocument(
+        { ...coverLetterForPdf, summary: markdownContent },
+        outputPath,
+        fileName,
+        OutputFormat.PDF,
+        pdfOptions
+      );
+      
+      // Clean up temporary file
+      try {
+        await fs.unlink(tempHtmlPath);
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+      
+      let successMessage = `✅ Cover letter successfully generated and saved to: ${filePath}`;
+      if (emailAddress) {
+        successMessage += `\n📧 Email address found in job posting: ${emailAddress}`;
+      }
+      if (managerName) {
+        successMessage += `\n👤 Hiring manager identified: ${managerName}`;
+      }
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: successMessage
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Error saving cover letter PDF:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error generating cover letter PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+// Email Template Generation Tools
+server.registerTool(
+  "generate_email_template",
+  {
+    description: "Generate a professional email template for job application. Automatically detects email addresses from job description.",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      templateType: z.enum(["application", "follow_up", "inquiry", "thank_you"]).optional().default("application").describe("Type of email template"),
+      recipientEmail: z.string().optional().describe("Recipient email address (optional, will use extracted email from job description if available)"),
+      hiringManagerName: z.string().optional().describe("Name of the hiring manager if known")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, templateType = "application", recipientEmail, hiringManagerName } = args;
+      
+      // Parse job requirements to extract email addresses
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Use provided email or extracted email
+      const targetEmail = recipientEmail || parsedJobReq.contactEmails?.[0];
+      
+      if (!targetEmail) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `⚠️ No email address found in job description. Please provide recipient email address or check the job posting for contact information.\n\nTo generate an email template, you can either:\n1. Add recipientEmail parameter with the email address\n2. Include an email address in the job description`
+            }
+          ]
+        };
+      }
+      
+      // Use extracted hiring manager name if not provided
+      const managerName = hiringManagerName || parsedJobReq.hiringManagerName;
+      
+      // Generate email template
+      const emailTemplate = generateEmailTemplate(
+        userProfile, 
+        parsedJobReq, 
+        targetEmail, 
+        templateType as EmailTemplateType, 
+        managerName
+      );
+      
+      let successMessage = `✅ ${templateType.charAt(0).toUpperCase() + templateType.slice(1)} email template generated`;
+      successMessage += `\n📧 To: ${targetEmail}`;
+      if (managerName) {
+        successMessage += `\n👤 Hiring manager: ${managerName}`;
+      }
+      
+      const emailContent = `Subject: ${emailTemplate.subject}\n\n${emailTemplate.body}\n\n--- ATTACHMENTS ---\n${emailTemplate.attachments.join(', ')}`;
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${successMessage}\n\n--- EMAIL TEMPLATE ---\n\n${emailContent}`
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Error generating email template:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error generating email template: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
+
+server.registerTool(
+  "draft_complete_application",
+  {
+    description: "Draft a complete job application package: CV, cover letter, and email template. Automatically generates PDF CV and cover letter, plus email template if email address is found.",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      outputPath: z.string().optional().describe("Directory path where files should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
+      baseFileName: z.string().optional().describe("Base filename for generated files (without extension)"),
+      hiringManagerName: z.string().optional().describe("Name of the hiring manager if known")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, baseFileName = "job_application", hiringManagerName } = args;
+      
+      // Use provided path or default path
+      const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
+        ? args.outputPath 
+        : getDefaultOutputPath();
+      
+      // Parse job requirements
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Use extracted hiring manager name if not provided
+      const managerName = hiringManagerName || parsedJobReq.hiringManagerName;
+      const emailAddress = parsedJobReq.contactEmails?.[0];
+      
+      const results: string[] = [];
+      
+      // 1. Generate CV PDF
+      const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
+      const cvFilePath = await generateDocument(
+        tailoredCV,
+        outputPath,
+        `${baseFileName}_CV`,
+        OutputFormat.PDF
+      );
+      results.push(`📄 CV saved to: ${cvFilePath}`);
+      
+      // 2. Generate Cover Letter PDF
+      const coverLetter = generateCoverLetter(userProfile, parsedJobReq, managerName, emailAddress);
+      const coverLetterMarkdown = `# Cover Letter\n\n${formatCoverLetterAsText(coverLetter)}`;
+      const coverLetterData = {
+        personalInfo: coverLetter.personalInfo,
+        summary: coverLetterMarkdown,
+        experience: [],
+        education: [],
+        skills: { technical: [] }
+      };
+      
+      const coverLetterFilePath = await generateDocument(
+        coverLetterData,
+        outputPath,
+        `${baseFileName}_Cover_Letter`,
+        OutputFormat.PDF
+      );
+      results.push(`📝 Cover letter saved to: ${coverLetterFilePath}`);
+      
+      // 3. Generate Email Template (if email found)
+      if (emailAddress) {
+        const emailTemplate = generateEmailTemplate(
+          userProfile, 
+          parsedJobReq, 
+          emailAddress, 
+          EmailTemplateType.APPLICATION, 
+          managerName
+        );
+        
+        const emailContent = `Subject: ${emailTemplate.subject}\n\n${emailTemplate.body}\n\n--- ATTACHMENTS ---\n${emailTemplate.attachments.join(', ')}`;
+        
+        // Save email template as text file
+        const emailFilePath = path.join(outputPath, `${baseFileName}_Email_Template.txt`);
+        await fs.writeFile(emailFilePath, emailContent, 'utf-8');
+        results.push(`📧 Email template saved to: ${emailFilePath}`);
+        results.push(`   To: ${emailAddress}`);
+      } else {
+        results.push(`⚠️ No email address found in job description - email template not generated`);
+      }
+      
+      let successMessage = `✅ Complete job application package generated for ${parsedJobReq.jobTitle} at ${parsedJobReq.company}`;
+      if (managerName) {
+        successMessage += `\n👤 Hiring manager: ${managerName}`;
+      }
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `${successMessage}\n\n${results.join('\n')}`
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Error drafting complete application:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error generating complete application: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
 
 /**
  * Main function to start the MCP server

@@ -76,6 +76,8 @@ export interface ParsedJobRequirements {
   salaryRange?: string;
   jobType?: string;
   benefits?: string[];
+  contactEmails?: string[];
+  hiringManagerName?: string;
 }
 
 /**
@@ -105,6 +107,13 @@ export function parseJobRequirements(jobReq: JobRequirements): ParsedJobRequirem
     experienceLevel = 'junior';
   }
   
+  // Extract email addresses
+  const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+  const contactEmails = fullText.match(emailRegex) || [];
+  
+  // Extract hiring manager name (common patterns)
+  const hiringManagerName = extractHiringManagerName(jobReq.jobDescription);
+  
   // Extract keywords (simplified - remove common words)
   const commonWords = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'a', 'an'];
   const words = fullText.toLowerCase().match(/\b\w+\b/g) || [];
@@ -121,6 +130,36 @@ export function parseJobRequirements(jobReq: JobRequirements): ParsedJobRequirem
     keyWords,
     experienceLevel,
     location: jobReq.location,
-    salaryRange: jobReq.salaryRange
+    salaryRange: jobReq.salaryRange,
+    contactEmails: contactEmails.length > 0 ? contactEmails : undefined,
+    hiringManagerName
   };
+}
+
+/**
+ * Extract hiring manager name from job description
+ */
+function extractHiringManagerName(jobDescription: string): string | undefined {
+  // Common patterns for hiring manager mentions
+  const patterns = [
+    /contact\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+    /reach\s+out\s+to\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+    /hiring\s+manager[:\s]+([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+    /questions\?\s+contact\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+    /([A-Z][a-z]+\s+[A-Z][a-z]+)[,\s]+hiring\s+manager/i,
+    /please\s+send.+to\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = jobDescription.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      // Validate it looks like a proper name (two words, starts with capitals)
+      if (/^[A-Z][a-z]+\s+[A-Z][a-z]+$/.test(name)) {
+        return name;
+      }
+    }
+  }
+  
+  return undefined;
 }
