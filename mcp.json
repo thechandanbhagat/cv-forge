@@ -1,0 +1,68 @@
+{
+  "name": "cv-forge",
+  "version": "1.0.3",
+  "description": "Forge powerful, ATS-friendly CVs tailored to any job - an MCP server for intelligent CV generation",
+  "author": "Chandan Bhagat",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thechandanbhagat/cv-forge.git"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "parse_job_requirements",
+        "description": "Parse job requirements and extract key information for CV tailoring"
+      },
+      {
+        "name": "generate_cv_data",
+        "description": "Generate tailored CV content based on user profile and job requirements"
+      },
+      {
+        "name": "generate_document",
+        "description": "Generate CV document in various formats (PDF, HTML, Markdown, text)"
+      },
+      {
+        "name": "generate_cover_letter",
+        "description": "Generate personalized cover letters tailored to specific job applications"
+      },
+      {
+        "name": "generate_email_template",
+        "description": "Create professional email templates with automatic email address detection"
+      },
+      {
+        "name": "generate_complete_application",
+        "description": "Generate CV, cover letter, and email template in one command"
+      }
+    ]
+  },
+  "installation": {
+    "npm": "cv-forge"
+  },
+  "configuration": {
+    "command": "cv-forge",
+    "env": {
+      "DEFAULT_OUTPUT_PATH": {
+        "description": "Default path where generated documents will be saved",
+        "default": "~/Documents/CVs"
+      },
+      "PDF_BASE_FONT_SIZE": {
+        "description": "Base font size for PDF documents",
+        "default": "12px"
+      },
+      "PDF_LINE_HEIGHT": {
+        "description": "Line height for PDF documents",
+        "default": "1.4"
+      }
+    }
+  },
+  "tags": [
+    "cv",
+    "resume",
+    "ats",
+    "job-application",
+    "document-generation",
+    "career",
+    "professional"
+  ]
+}

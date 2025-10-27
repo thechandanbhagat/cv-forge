@@ -34,7 +34,10 @@
     "pdf",
     "markdown",
     "claude",
-    "ai"
+    "ai",
+    "career",
+    "professional",
+    "document-generation"
   ],
   "author": "Chandan Bhagat <chandan.bhagat@outlook.com>",
   "license": "MIT",
@@ -48,6 +51,20 @@
   "homepage": "https://github.com/thechandanbhagat/cv-forge#readme",
   "engines": {
     "node": ">=18.0.0"
+  },
+  "mcp": {
+    "server": true,
+    "version": "1.0.0",
+    "capabilities": {
+      "tools": [
+        "parse_job_requirements",
+        "generate_cv_data", 
+        "generate_document",
+        "generate_cover_letter",
+        "generate_email_template",
+        "generate_complete_application"
+      ]
+    }
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
