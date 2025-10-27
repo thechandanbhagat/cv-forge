@@ -1,6 +1,6 @@
 {
   "name": "cv-forge",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Forge powerful, ATS-friendly CVs tailored to any job - an MCP server for intelligent CV generation",
   "main": "build/index.js",
   "type": "module",
