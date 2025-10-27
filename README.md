@@ -8,7 +8,8 @@ An intelligent MCP (Model Context Protocol) server that analyzes job postings an
 
 - **Parse Job Requirements**: Extract key skills and qualifications from job postings
 - **Generate Tailored CVs**: Create customized CV content based on user profile and job requirements
-- **Multiple Output Formats**: Generate CVs in PDF, HTML, Markdown, and text formats
+- **PDF by Default**: Automatically generates professional PDF documents when no format is specified
+- **Multiple Output Formats**: Generate CVs in PDF (default), HTML, Markdown, and text formats
 - **Professional PDF Generation**: Create publication-ready PDF documents with professional styling
 - **ATS-Friendly**: Optimized for Applicant Tracking Systems with proper keyword placement
 - **Markdown Support**: Generate CVs in Markdown for easy editing and version control
@@ -203,7 +204,17 @@ Saves CV content as a formatted text file.
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "generated_cv"
 
-#### 4. `generate_and_save_cv_pdf` (Recommended)
+#### 4. `generate_cv` (Recommended - Main CV Generation Tool)
+Generate tailored CV and save to specified location or default folder. **Defaults to PDF format** if no format is specified.
+
+**Parameters:**
+- `userProfile` (object, required): Complete user profile information
+- `jobRequirements` (object, required): Job requirements object
+- `outputPath` (string, optional): Directory path where the CV should be saved (uses DEFAULT_OUTPUT_PATH if not provided)
+- `fileName` (string, optional): Custom filename (without extension), defaults for "professional_cv"
+- `format` (string, optional): Output format - "pdf" (default), "html", or "markdown"
+
+#### 5. `generate_and_save_cv_pdf` (Legacy - Use generate_cv instead)
 Generate tailored CV and save directly as professional PDF (combines CV generation and PDF creation in one step).
 
 **Parameters:**
@@ -212,7 +223,7 @@ Generate tailored CV and save directly as professional PDF (combines CV generati
 - `outputPath` (string, optional): Directory path where the CV should be saved (uses DEFAULT_OUTPUT_PATH if not provided)
 - `fileName` (string, optional): Custom filename (without extension), defaults to "professional_cv"
 
-#### 5. `generate_and_save_cv_markdown` (Recommended)
+#### 6. `generate_and_save_cv_markdown` (Recommended)
 Generate tailored CV and save directly as Markdown (combines CV generation and Markdown creation in one step).
 
 **Parameters:**
@@ -221,7 +232,7 @@ Generate tailored CV and save directly as Markdown (combines CV generation and M
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "cv_markdown"
 
-#### 6. `generate_and_save_cv_html` (Recommended)
+#### 7. `generate_and_save_cv_html` (Recommended)
 Generate tailored CV and save directly as HTML (combines CV generation and HTML creation in one step).
 
 **Parameters:**
@@ -230,7 +241,7 @@ Generate tailored CV and save directly as HTML (combines CV generation and HTML 
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "cv_html"
 
-#### 7. `generate_cv_pdf` (Advanced)
+#### 8. `generate_cv_pdf` (Advanced)
 Generate and save CV as a professional PDF document from pre-generated CV data.
 
 **Parameters:**
@@ -238,7 +249,7 @@ Generate and save CV as a professional PDF document from pre-generated CV data.
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "professional_cv"
 
-#### 8. `generate_cv_markdown` (Advanced)
+#### 9. `generate_cv_markdown` (Advanced)
 Generate CV as Markdown format from pre-generated CV data.
 
 **Parameters:**
@@ -246,7 +257,7 @@ Generate CV as Markdown format from pre-generated CV data.
 - `outputPath` (string, required): Directory path where the CV should be saved
 - `fileName` (string, optional): Custom filename (without extension), defaults to "cv_markdown"
 
-#### 9. `generate_cv_html` (Advanced)
+#### 10. `generate_cv_html` (Advanced)
 Generate CV as styled HTML document from pre-generated CV data.
 
 **Parameters:**
@@ -315,9 +326,9 @@ Company: TechCorp Inc
 Description: We are looking for a Senior Software Engineer with 5+ years of experience in JavaScript, React, and Node.js. Must have experience with cloud platforms and agile methodologies. Strong communication skills required."
 ```
 
-### 2. Generate Tailored CV (Simple One-Step Process)
+### 2. Generate Tailored CV (Simple One-Step Process - PDF by Default)
 ```
-"Generate a tailored CV for me and save it as a PDF based on this job posting:
+"Generate a tailored CV for me based on this job posting:
 
 Job Title: Senior Software Engineer
 Company: TechCorp Inc
@@ -334,14 +345,21 @@ My Profile:
 Please save it to C:\Users\John\Documents\CVs with filename 'john_doe_senior_engineer_techcorp'"
 ```
 
+**Note:** This will automatically generate a PDF file (default format) unless you specify a different format.
+
 ### 3. Generate Different Formats
 ```
 "Can you generate my CV in multiple formats? I need:
-1. A professional PDF for applications
-2. A Markdown version for my GitHub
+1. A professional PDF for applications (default format)
+2. A Markdown version for my GitHub  
 3. An HTML version for my website
 
 Save them all to C:\Users\John\Documents\CVs with the base filename 'john_doe_cv'"
+```
+
+**Or specify format explicitly:**
+```
+"Generate my CV in HTML format and save it to C:\Users\John\Documents\CVs"
 ```
 
 ### 3. Direct Tool Usage Examples

@@ -152,7 +152,7 @@ server.registerTool(
 server.registerTool(
   "generate_and_save_cv_pdf",
   {
-    description: "Generate tailored CV and save directly as PDF (combines CV generation and PDF creation in one step). If outputPath is not provided, uses DEFAULT_OUTPUT_PATH from environment.",
+    description: "Generate tailored CV and save specifically as PDF format (legacy tool - consider using 'generate_cv' which defaults to PDF). If outputPath is not provided, uses DEFAULT_OUTPUT_PATH from environment.",
     inputSchema: {
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
@@ -479,15 +479,89 @@ server.registerTool(
   }
 );
 
+// Main CV generation tool - defaults to PDF format
+server.registerTool(
+  "generate_cv",
+  {
+    description: "Generate tailored CV and save to specified location or default folder. Defaults to PDF format if no format is specified.",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
+      fileName: z.string().optional().describe("Custom filename (without extension)"),
+      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf" } = args;
+      
+      // Use provided path or default path if outputPath is not provided, is "./" or is empty
+      const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
+        ? args.outputPath 
+        : getDefaultOutputPath();
+      
+      console.error(`[DEBUG generate_cv] Received outputPath: ${args.outputPath}`);
+      console.error(`[DEBUG generate_cv] Using outputPath: ${outputPath}`);
+      console.error(`[DEBUG generate_cv] Format: ${format}`);
+      
+      // Parse job requirements
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Generate tailored CV
+      const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
+      
+      // Determine output format
+      let outputFormat: OutputFormat;
+      switch (format) {
+        case "html":
+          outputFormat = OutputFormat.HTML;
+          break;
+        case "markdown":
+          outputFormat = OutputFormat.MARKDOWN;
+          break;
+        default:
+          outputFormat = OutputFormat.PDF;
+      }
+      
+      // Generate document
+      const filePath = await generateDocument(
+        tailoredCV,
+        outputPath,
+        fileName,
+        outputFormat
+      );
+      
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `CV successfully generated and saved as ${format.toUpperCase()}: ${filePath}\n\nTailored for: ${jobRequirements.jobTitle} at ${jobRequirements.company}\nUsed output path: ${outputPath}`
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Error generating CV: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
+
 server.registerTool(
   "generate_cv_to_default_folder",
   {
-    description: "Generate tailored CV and save to default folder (uses .env DEFAULT_OUTPUT_PATH)",
+    description: "Generate tailored CV and save to default folder (uses .env DEFAULT_OUTPUT_PATH). Defaults to PDF format.",
     inputSchema: {
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       fileName: z.string().optional().describe("Custom filename (without extension)"),
-      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format")
+      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)")
     }
   },
   async (args) => {
