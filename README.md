@@ -211,8 +211,10 @@ Generate tailored CV and save to specified location or default folder. **Default
 - `userProfile` (object, required): Complete user profile information
 - `jobRequirements` (object, required): Job requirements object
 - `outputPath` (string, optional): Directory path where the CV should be saved (uses DEFAULT_OUTPUT_PATH if not provided)
-- `fileName` (string, optional): Custom filename (without extension), defaults for "professional_cv"
+- `fileName` (string, optional): Custom filename (without extension), defaults to "professional_cv"
 - `format` (string, optional): Output format - "pdf" (default), "html", or "markdown"
+- `pageSize` (string, optional): PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided
+- `margins` (object, optional): PDF margins with top, right, bottom, left properties (e.g., '10mm', '0.8in') - uses PDF_MARGIN_* env vars if not provided
 
 #### 5. `generate_and_save_cv_pdf` (Legacy - Use generate_cv instead)
 Generate tailored CV and save directly as professional PDF (combines CV generation and PDF creation in one step).
@@ -282,10 +284,11 @@ The MCP server supports various configuration options via environment variables 
         "DEFAULT_OUTPUT_PATH": "D:/CV",
         "TEMP_DIR": "C:/Users/YourName/AppData/Local/Temp/cv-maker",
         "PDF_TIMEOUT": "300000",
-        "PDF_MARGIN_TOP": "20mm",
-        "PDF_MARGIN_RIGHT": "20mm",
-        "PDF_MARGIN_BOTTOM": "20mm",
-        "PDF_MARGIN_LEFT": "20mm",
+        "PDF_PAGE_SIZE": "A4",
+        "PDF_MARGIN_TOP": "10mm",
+        "PDF_MARGIN_RIGHT": "10mm",
+        "PDF_MARGIN_BOTTOM": "10mm",
+        "PDF_MARGIN_LEFT": "10mm",
         "PDF_BASE_FONT_SIZE": "12px",
         "PDF_LINE_HEIGHT": "1.4",
         "PDF_H1_FONT_SIZE": "20px",
@@ -304,7 +307,9 @@ The MCP server supports various configuration options via environment variables 
 - `DEFAULT_OUTPUT_PATH`: Default directory for saving CV files (when outputPath is not provided or is "./")
 - `TEMP_DIR`: Directory for temporary files during PDF generation
 - `PDF_TIMEOUT`: Timeout for PDF generation in milliseconds
-- `PDF_MARGIN_*`: PDF page margins (top, right, bottom, left)
+- `PDF_PAGE_SIZE`: Default PDF page size - defaults to 'A4'
+  - Common sizes: 'A4' (210×297mm), 'Letter' (8.5×11in), 'Legal' (8.5×14in)
+- `PDF_MARGIN_*`: PDF page margins (top, right, bottom, left) - defaults to '10mm'
 - `PDF_BASE_FONT_SIZE`: Base font size for CV body text (12px ≈ MS Word 9pt, 13px ≈ 10pt)
 - `PDF_LINE_HEIGHT`: Line height for text (1.4 recommended for compact layout)
 - `PDF_H1_FONT_SIZE`: Font size for name/title heading
@@ -360,6 +365,11 @@ Save them all to C:\Users\John\Documents\CVs with the base filename 'john_doe_cv
 **Or specify format explicitly:**
 ```
 "Generate my CV in HTML format and save it to C:\Users\John\Documents\CVs"
+```
+
+**Or specify custom page size and margins for PDF:**
+```
+"Generate my CV as a PDF with Letter page size and 1 inch margins on all sides, save it to C:\Users\John\Documents\CVs"
 ```
 
 ### 3. Direct Tool Usage Examples
@@ -509,6 +519,16 @@ npm run dev
 - Check that output directory exists and is writable
 - Verify `TEMP_DIR` path is valid
 - Ensure sufficient disk space
+
+### Custom page size not working
+- Ensure page size is a valid format (A4, Letter, Legal, A3, A5, etc.)
+- Check that the page size is supported by the PDF generator
+- Use standard page size names (case-sensitive)
+
+### Custom margins not applied
+- Use proper units: 'mm', 'cm', 'in', 'px', 'pt'
+- Example: '10mm', '0.8in', '72pt'
+- Restart Claude Desktop after changing environment variables
 
 ## Future Enhancements
 
