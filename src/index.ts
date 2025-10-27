@@ -18,7 +18,8 @@ import {
   generateDocument, 
   formatCVAsMarkdown,
   OutputFormat,
-  type CVData 
+  type CVData,
+  type PDFOptions 
 } from "./lib/document-generator.js";
 
 /**
@@ -157,12 +158,19 @@ server.registerTool(
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
-      fileName: z.string().optional().describe("Custom filename (without extension)")
+      fileName: z.string().optional().describe("Custom filename (without extension)"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, fileName = "professional_cv" } = args;
+      const { userProfile, jobRequirements, fileName = "professional_cv", pageSize, margins } = args;
       // Use default path if outputPath is not provided, is "./" or is empty
       const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
         ? args.outputPath 
@@ -177,12 +185,19 @@ server.registerTool(
       // Generate tailored CV
       const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
       
+      // Prepare PDF options
+      const pdfOptions: PDFOptions = {
+        pageSize,
+        margins
+      };
+
       // Generate PDF directly
       const filePath = await generateDocument(
         tailoredCV,
         outputPath,
         fileName,
-        OutputFormat.PDF
+        OutputFormat.PDF,
+        pdfOptions
       );
       
       return {
@@ -260,18 +275,32 @@ server.registerTool(
     inputSchema: {
       cvData: z.any().describe("Tailored CV data object"),
       outputPath: z.string().describe("Directory path where the CV should be saved"),
-      fileName: z.string().optional().describe("Custom filename (without extension)")
+      fileName: z.string().optional().describe("Custom filename (without extension)"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { cvData, outputPath, fileName = "professional_cv" } = args;
+      const { cvData, outputPath, fileName = "professional_cv", pageSize, margins } = args;
       
+      // Prepare PDF options
+      const pdfOptions: PDFOptions = {
+        pageSize,
+        margins
+      };
+
       const filePath = await generateDocument(
         cvData,
         outputPath,
         fileName,
-        OutputFormat.PDF
+        OutputFormat.PDF,
+        pdfOptions
       );
       
       return {
@@ -483,18 +512,25 @@ server.registerTool(
 server.registerTool(
   "generate_cv",
   {
-    description: "Generate tailored CV and save to specified location or default folder. Defaults to PDF format if no format is specified.",
+    description: "Generate tailored CV in PDF format and save to specified location or default folder. Always generates PDF unless a different format is explicitly requested.",
     inputSchema: {
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
       fileName: z.string().optional().describe("Custom filename (without extension)"),
-      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)")
+      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format - automatically set to PDF, only specify if you want HTML or Markdown instead"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf" } = args;
+      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf", pageSize, margins } = args;
       
       // Use provided path or default path if outputPath is not provided, is "./" or is empty
       const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
@@ -524,12 +560,19 @@ server.registerTool(
           outputFormat = OutputFormat.PDF;
       }
       
+      // Prepare PDF options if generating PDF
+      const pdfOptions: PDFOptions | undefined = format === "pdf" ? {
+        pageSize,
+        margins
+      } : undefined;
+
       // Generate document
       const filePath = await generateDocument(
         tailoredCV,
         outputPath,
         fileName,
-        outputFormat
+        outputFormat,
+        pdfOptions
       );
       
       return {
@@ -561,12 +604,19 @@ server.registerTool(
       userProfile: UserProfileSchema,
       jobRequirements: JobRequirementsSchema,
       fileName: z.string().optional().describe("Custom filename (without extension)"),
-      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)")
+      format: z.enum(["pdf", "html", "markdown"]).optional().default("pdf").describe("Output format (defaults to PDF)"),
+      pageSize: z.string().optional().describe("PDF page size (e.g., 'A4', 'Letter', 'Legal') - uses PDF_PAGE_SIZE env var if not provided"),
+      margins: z.object({
+        top: z.string().optional().describe("Top margin (e.g., '10mm', '0.8in')"),
+        right: z.string().optional().describe("Right margin (e.g., '10mm', '0.8in')"),
+        bottom: z.string().optional().describe("Bottom margin (e.g., '10mm', '0.8in')"),
+        left: z.string().optional().describe("Left margin (e.g., '10mm', '0.8in')")
+      }).optional().describe("PDF margins - uses PDF_MARGIN_* env vars if not provided")
     }
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf" } = args;
+      const { userProfile, jobRequirements, fileName = "professional_cv", format = "pdf", pageSize, margins } = args;
       
       // Use default output path from environment or fallback
       const outputPath = getDefaultOutputPath();
@@ -590,12 +640,19 @@ server.registerTool(
           outputFormat = OutputFormat.PDF;
       }
       
+      // Prepare PDF options if generating PDF
+      const pdfOptions: PDFOptions | undefined = format === "pdf" ? {
+        pageSize,
+        margins
+      } : undefined;
+
       // Generate document
       const filePath = await generateDocument(
         tailoredCV,
         outputPath,
         fileName,
-        outputFormat
+        outputFormat,
+        pdfOptions
       );
       
       return {
@@ -744,6 +801,65 @@ function formatCVAsText(cvData: any): string {
   
   return text;
 }
+
+// Add a dedicated tool for drafting CVs that always generates PDF
+server.registerTool(
+  "draft_cv_pdf",
+  {
+    description: "Draft a tailored CV in PDF format for a specific job. This tool automatically generates a professional PDF CV without asking for format preferences.",
+    inputSchema: {
+      userProfile: UserProfileSchema,
+      jobRequirements: JobRequirementsSchema,
+      outputPath: z.string().optional().describe("Directory path where the CV should be saved (optional, uses DEFAULT_OUTPUT_PATH if not provided)"),
+      fileName: z.string().optional().describe("Custom filename (without extension)")
+    }
+  },
+  async (args) => {
+    try {
+      const { userProfile, jobRequirements, fileName = "professional_cv" } = args;
+      
+      // Use provided path or default path
+      const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
+        ? args.outputPath 
+        : getDefaultOutputPath();
+      
+      console.error(`[DEBUG draft_cv_pdf] Using outputPath: ${outputPath}`);
+      
+      // Parse job requirements
+      const parsedJobReq = parseJobRequirements(jobRequirements);
+      
+      // Generate tailored CV
+      const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
+      
+      // Generate PDF document
+      const filePath = await generateDocument(
+        tailoredCV,
+        outputPath,
+        fileName,
+        OutputFormat.PDF
+      );
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ CV successfully generated and saved to: ${filePath}\n\nThe CV has been tailored for the ${parsedJobReq.jobTitle} position at ${parsedJobReq.company} and saved as a professional PDF document.`
+          }
+        ]
+      };
+    } catch (error) {
+      console.error("Error in draft_cv_pdf:", error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `❌ Error generating CV: ${error instanceof Error ? error.message : 'Unknown error'}`
+          }
+        ]
+      };
+    }
+  }
+);
 
 /**
  * Main function to start the MCP server
