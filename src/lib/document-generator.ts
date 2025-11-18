@@ -7,6 +7,7 @@ import crypto from "crypto";
 import escapeHtml from "escape-html";
 import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./path-utils.js";
 import { sanitizeErrorMessage } from "./error-utils.js";
+import { config, debugLog } from "./config.js";
 
 /**
  * Allowed PDF page sizes to prevent injection attacks
@@ -386,28 +387,28 @@ export async function generateDocument(
       const markdown = formatCVAsMarkdown(cvData);
       const filePath = safeJoinPath(validatedOutputPath, `${baseName}.pdf`);
       
-      console.error(`[DEBUG document-generator] outputPath parameter: ${outputPath}`);
-      console.error(`[DEBUG document-generator] validated outputPath: ${validatedOutputPath}`);
-      console.error(`[DEBUG document-generator] baseName: ${baseName}`);
-      console.error(`[DEBUG document-generator] resolved filePath: ${filePath}`);
+      debugLog('document-generator', 'outputPath parameter:', outputPath);
+      debugLog('document-generator', 'validated outputPath:', validatedOutputPath);
+      debugLog('document-generator', 'baseName:', baseName);
+      debugLog('document-generator', 'resolved filePath:', filePath);
 
       try {
         // Directory already ensured to exist above
-        console.error(`[DEBUG document-generator] Using validated directory: ${validatedOutputPath}`);
+        debugLog('document-generator', 'Using validated directory:', validatedOutputPath);
 
         // SECURITY: Create a temporary CSS file with cryptographically random name
         const randomSuffix = crypto.randomBytes(16).toString('hex');
         const tempCssPath = path.join(os.tmpdir(), `cv-style-${randomSuffix}.css`);
         
-        // Get font configuration from environment variables
+        // Get font configuration from validated config
         // MS Word 10pt ≈ 13.33px, 9pt ≈ 12px
-        const baseFontSize = process.env.PDF_BASE_FONT_SIZE || '12px';
-        const lineHeight = process.env.PDF_LINE_HEIGHT || '1.4';
-        const h1FontSize = process.env.PDF_H1_FONT_SIZE || '20px';
-        const h2FontSize = process.env.PDF_H2_FONT_SIZE || '15px';
-        const h3FontSize = process.env.PDF_H3_FONT_SIZE || '13px';
-        const paragraphSpacing = process.env.PDF_PARAGRAPH_SPACING || '8px';
-        const sectionSpacing = process.env.PDF_SECTION_SPACING || '12px';
+        const baseFontSize = config.PDF_BASE_FONT_SIZE;
+        const lineHeight = config.PDF_LINE_HEIGHT;
+        const h1FontSize = config.PDF_H1_FONT_SIZE;
+        const h2FontSize = config.PDF_H2_FONT_SIZE;
+        const h3FontSize = config.PDF_H3_FONT_SIZE;
+        const paragraphSpacing = config.PDF_PARAGRAPH_SPACING;
+        const sectionSpacing = config.PDF_SECTION_SPACING;
         
         const cssContent = `body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Calibri', sans-serif;
@@ -472,24 +473,34 @@ export async function generateDocument(
         }`;
         
         await fs.writeFile(tempCssPath, cssContent, 'utf-8');
-        
-        console.error(`[DEBUG document-generator] About to call mdToPdf with dest: ${filePath}`);
+
+        debugLog('document-generator', 'About to call mdToPdf with dest:', filePath);
 
         // SECURITY: Validate and sanitize page size and margins to prevent injection
-        const pageSize = validatePageSize(
-          pdfOptions?.pageSize || process.env.PDF_PAGE_SIZE
-        );
+        const pageSize = validatePageSize(pdfOptions?.pageSize || config.PDF_PAGE_SIZE);
         const margins = {
-          top: validateMargin(pdfOptions?.margins?.top || process.env.PDF_MARGIN_TOP, '10mm'),
-          right: validateMargin(pdfOptions?.margins?.right || process.env.PDF_MARGIN_RIGHT, '10mm'),
-          bottom: validateMargin(pdfOptions?.margins?.bottom || process.env.PDF_MARGIN_BOTTOM, '10mm'),
-          left: validateMargin(pdfOptions?.margins?.left || process.env.PDF_MARGIN_LEFT, '10mm')
+          top: validateMargin(pdfOptions?.margins?.top || config.PDF_MARGIN_TOP, '10mm'),
+          right: validateMargin(pdfOptions?.margins?.right || config.PDF_MARGIN_RIGHT, '10mm'),
+          bottom: validateMargin(pdfOptions?.margins?.bottom || config.PDF_MARGIN_BOTTOM, '10mm'),
+          left: validateMargin(pdfOptions?.margins?.left || config.PDF_MARGIN_LEFT, '10mm')
         };
 
-        console.error(`[DEBUG document-generator] Using validated page size: ${pageSize}`);
-        console.error(`[DEBUG document-generator] Using validated margins: ${JSON.stringify(margins)}`);
+        debugLog('document-generator', 'Using validated page size:', pageSize);
+        debugLog('document-generator', 'Using validated margins:', margins);
 
-        // Generate PDF with the temporary CSS file
+        // Generate PDF with timeout and security configuration
+        const launchArgs: string[] = [];
+
+        // SECURITY: Only disable sandbox if explicitly configured
+        // This is needed in containerized environments (Docker) but is a security risk
+        if (config.DISABLE_SANDBOX) {
+          console.error('[WARN] Chrome sandbox is disabled. This should only be used in trusted containerized environments.');
+          launchArgs.push('--no-sandbox', '--disable-setuid-sandbox');
+        }
+
+        debugLog('document-generator', 'PDF timeout:', config.PDF_TIMEOUT, 'ms');
+        debugLog('document-generator', 'Sandbox disabled:', config.DISABLE_SANDBOX);
+
         const pdf = await mdToPdf(
           { content: markdown },
           {
@@ -500,7 +511,8 @@ export async function generateDocument(
               printBackground: true
             },
             launch_options: {
-              args: ['--no-sandbox', '--disable-setuid-sandbox']
+              args: launchArgs,
+              timeout: config.PDF_TIMEOUT
             },
             stylesheet: [tempCssPath]
           }
@@ -509,8 +521,10 @@ export async function generateDocument(
         // Clean up temporary CSS file
         try {
           await fs.unlink(tempCssPath);
+          debugLog('document-generator', 'Cleaned up temp CSS file:', tempCssPath);
         } catch (cleanupError) {
-          // Ignore cleanup errors
+          // Log cleanup failures but don't fail the operation
+          console.error('[WARN] Failed to cleanup temp CSS file:', tempCssPath, cleanupError);
         }
         
         // Verify the PDF was created

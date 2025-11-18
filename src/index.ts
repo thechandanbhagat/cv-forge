@@ -35,6 +35,7 @@ import {
 } from "./lib/email-template-generator.js";
 import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./lib/path-utils.js";
 import { sanitizeErrorMessage, createSafeErrorResponse } from "./lib/error-utils.js";
+import { config, debugLog } from "./lib/config.js";
 
 /**
  * CV Maker MCP Server
@@ -47,28 +48,26 @@ import { sanitizeErrorMessage, createSafeErrorResponse } from "./lib/error-utils
  * Get the default output path from environment variables or user's Documents folder
  */
 function getDefaultOutputPath(): string {
-  const envPath = process.env.DEFAULT_OUTPUT_PATH;
-  console.error(`[DEBUG] DEFAULT_OUTPUT_PATH env var: ${envPath}`);
-  // SECURITY: Never log all environment variables as they may contain sensitive data
-  // console.error(`[DEBUG] All env vars: ${JSON.stringify(process.env, null, 2)}`);
+  const envPath = config.DEFAULT_OUTPUT_PATH;
+  debugLog('getDefaultOutputPath', 'DEFAULT_OUTPUT_PATH env var:', envPath);
 
   if (envPath) {
     const resolved = path.resolve(envPath.replace(/\//g, path.sep));
-    console.error(`[DEBUG] Resolved output path: ${resolved}`);
+    debugLog('getDefaultOutputPath', 'Resolved output path:', resolved);
     return resolved;
   }
-  
+
   // Fallback to user's Documents/CVs folder
   const homeDir = process.env.USERPROFILE || process.env.HOME;
   if (homeDir) {
     const fallback = path.join(homeDir, 'Documents', 'CVs');
-    console.error(`[DEBUG] Using fallback path: ${fallback}`);
+    debugLog('getDefaultOutputPath', 'Using fallback path:', fallback);
     return fallback;
   }
-  
+
   // Final fallback
   const finalFallback = path.resolve('./generated-cvs');
-  console.error(`[DEBUG] Using final fallback path: ${finalFallback}`);
+  debugLog('getDefaultOutputPath', 'Using final fallback path:', finalFallback);
   return finalFallback;
 }
 
@@ -177,8 +176,8 @@ server.registerTool(
         ? args.outputPath 
         : getDefaultOutputPath();
       
-      console.error(`[DEBUG generate_and_save_cv_pdf] Received outputPath: ${args.outputPath}`);
-      console.error(`[DEBUG generate_and_save_cv_pdf] Using outputPath: ${outputPath}`);
+      debugLog('generate_and_save_cv_pdf', 'Received outputPath:', args.outputPath);
+      debugLog('generate_and_save_cv_pdf', 'Using outputPath:', outputPath);
       
       // Parse job requirements
       const parsedJobReq = parseJobRequirements(jobRequirements);
@@ -988,8 +987,10 @@ server.registerTool(
       // Clean up temporary file
       try {
         await fs.unlink(tempHtmlPath);
+        debugLog('save_cover_letter_pdf', 'Cleaned up temp HTML file:', tempHtmlPath);
       } catch (cleanupError) {
-        // Ignore cleanup errors
+        // Log cleanup failures but don't fail the operation
+        console.error('[WARN] Failed to cleanup temp HTML file:', tempHtmlPath, cleanupError);
       }
       
       let successMessage = `✅ Cover letter successfully generated and saved to: ${filePath}`;
