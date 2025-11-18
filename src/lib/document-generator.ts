@@ -3,6 +3,8 @@ import { mdToPdf } from "md-to-pdf";
 import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
+import escapeHtml from "escape-html";
+import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./path-utils.js";
 
 export interface CVData {
   personalInfo: {
@@ -199,21 +201,25 @@ export function formatCVAsMarkdown(cvData: any): string {
 export function formatCVAsHTML(cvData: any): string {
   // Validation is handled in formatCVAsMarkdown
   const markdown = formatCVAsMarkdown(cvData);
+  // SECURITY: Disable HTML pass-through to prevent HTML injection attacks
   const md = new MarkdownIt({
-    html: true,
+    html: false,  // Disable raw HTML for security
     linkify: true,
     typographer: true
   });
   
   const htmlContent = md.render(markdown);
-  
+
+  // Escape fullName for use in title to prevent XSS
+  const escapedFullName = escapeHtml(cvData.personalInfo.fullName);
+
   // Wrap in a complete HTML document with professional styling
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${cvData.personalInfo.fullName} - Resume</title>
+    <title>${escapedFullName} - Resume</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -304,38 +310,43 @@ export async function generateDocument(
   format: OutputFormat = OutputFormat.PDF,
   pdfOptions?: PDFOptions
 ): Promise<string> {
+  // Validate and normalize the output path to prevent path traversal
+  const validatedOutputPath = validateAndNormalizePath(outputPath);
+
   // Ensure output directory exists
-  await fs.mkdir(outputPath, { recursive: true });
-  
-  const baseName = fileName.replace(/\.[^/.]+$/, ""); // Remove extension if present
-  
+  await ensureDirectoryExists(validatedOutputPath);
+
+  // Sanitize filename to prevent path traversal
+  const sanitizedFileName = sanitizeFileName(fileName);
+  const baseName = sanitizedFileName.replace(/\.[^/.]+$/, ""); // Remove extension if present
+
   switch (format) {
     case OutputFormat.MARKDOWN: {
       const markdown = formatCVAsMarkdown(cvData);
-      const filePath = path.join(outputPath, `${baseName}.md`);
+      const filePath = safeJoinPath(validatedOutputPath, `${baseName}.md`);
       await fs.writeFile(filePath, markdown, 'utf-8');
       return filePath;
     }
-    
+
     case OutputFormat.HTML: {
       const html = formatCVAsHTML(cvData);
-      const filePath = path.join(outputPath, `${baseName}.html`);
+      const filePath = safeJoinPath(validatedOutputPath, `${baseName}.html`);
       await fs.writeFile(filePath, html, 'utf-8');
       return filePath;
     }
-    
+
     case OutputFormat.PDF: {
       const markdown = formatCVAsMarkdown(cvData);
-      const filePath = path.resolve(outputPath, `${baseName}.pdf`);
+      const filePath = safeJoinPath(validatedOutputPath, `${baseName}.pdf`);
       
       console.error(`[DEBUG document-generator] outputPath parameter: ${outputPath}`);
+      console.error(`[DEBUG document-generator] validated outputPath: ${validatedOutputPath}`);
       console.error(`[DEBUG document-generator] baseName: ${baseName}`);
       console.error(`[DEBUG document-generator] resolved filePath: ${filePath}`);
-      
+
       try {
-        // Ensure output directory exists
-        await fs.mkdir(outputPath, { recursive: true });
-        console.error(`[DEBUG document-generator] Created directory: ${outputPath}`);
+        // Directory already ensured to exist above
+        console.error(`[DEBUG document-generator] Using validated directory: ${validatedOutputPath}`);
         
         // Create a temporary CSS file
         const tempCssPath = path.join(os.tmpdir(), `cv-style-${Date.now()}.css`);

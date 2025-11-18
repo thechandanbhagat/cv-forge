@@ -27,11 +27,12 @@ import {
   formatCoverLetterAsHTML,
   type CoverLetterData 
 } from "./lib/cover-letter-generator.js";
-import { 
-  generateEmailTemplate, 
+import {
+  generateEmailTemplate,
   EmailTemplateType,
-  type EmailTemplateData 
+  type EmailTemplateData
 } from "./lib/email-template-generator.js";
+import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./lib/path-utils.js";
 
 /**
  * CV Maker MCP Server
@@ -46,8 +47,9 @@ import {
 function getDefaultOutputPath(): string {
   const envPath = process.env.DEFAULT_OUTPUT_PATH;
   console.error(`[DEBUG] DEFAULT_OUTPUT_PATH env var: ${envPath}`);
-  console.error(`[DEBUG] All env vars: ${JSON.stringify(process.env, null, 2)}`);
-  
+  // SECURITY: Never log all environment variables as they may contain sensitive data
+  // console.error(`[DEBUG] All env vars: ${JSON.stringify(process.env, null, 2)}`);
+
   if (envPath) {
     const resolved = path.resolve(envPath.replace(/\//g, path.sep));
     console.error(`[DEBUG] Resolved output path: ${resolved}`);
@@ -244,20 +246,24 @@ server.registerTool(
   },
   async (args) => {
     try {
-      const { cvData, outputPath, fileName = "generated_cv" } = args;
-      
+      const { cvData, fileName = "generated_cv" } = args;
+
+      // Validate and sanitize paths to prevent path traversal
+      const validatedOutputPath = validateAndNormalizePath(args.outputPath);
+      const sanitizedFileName = sanitizeFileName(fileName);
+
       // Ensure output directory exists
-      await fs.mkdir(outputPath, { recursive: true });
-      
+      await ensureDirectoryExists(validatedOutputPath);
+
       // Create text format CV
       const cvText = formatCVAsText(cvData);
-      
-      // Full file path
-      const fullPath = path.join(outputPath, `${fileName}.txt`);
-      
+
+      // Full file path with safe join
+      const fullPath = safeJoinPath(validatedOutputPath, `${sanitizedFileName}.txt`);
+
       // Save to file
       await fs.writeFile(fullPath, cvText, 'utf-8');
-      
+
       return {
         content: [
           {
@@ -1131,22 +1137,28 @@ server.registerTool(
   },
   async (args) => {
     try {
-      const { userProfile, jobRequirements, baseFileName = "job_application", hiringManagerName } = args;
-      
+      const { userProfile, jobRequirements, hiringManagerName } = args;
+
+      // Sanitize baseFileName to prevent path traversal
+      const baseFileName = sanitizeFileName(args.baseFileName || "job_application");
+
       // Use provided path or default path
-      const outputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "") 
-        ? args.outputPath 
+      const rawOutputPath = (args.outputPath && args.outputPath !== "./" && args.outputPath.trim() !== "")
+        ? args.outputPath
         : getDefaultOutputPath();
-      
+
+      // Validate output path to prevent path traversal
+      const outputPath = validateAndNormalizePath(rawOutputPath);
+
       // Parse job requirements
       const parsedJobReq = parseJobRequirements(jobRequirements);
-      
+
       // Use extracted hiring manager name if not provided
       const managerName = hiringManagerName || parsedJobReq.hiringManagerName;
       const emailAddress = parsedJobReq.contactEmails?.[0];
-      
+
       const results: string[] = [];
-      
+
       // 1. Generate CV PDF
       const tailoredCV = generateTailoredCV(userProfile, parsedJobReq);
       const cvFilePath = await generateDocument(
@@ -1156,7 +1168,7 @@ server.registerTool(
         OutputFormat.PDF
       );
       results.push(`📄 CV saved to: ${cvFilePath}`);
-      
+
       // 2. Generate Cover Letter PDF
       const coverLetter = generateCoverLetter(userProfile, parsedJobReq, managerName, emailAddress);
       const coverLetterMarkdown = `# Cover Letter\n\n${formatCoverLetterAsText(coverLetter)}`;
@@ -1167,7 +1179,7 @@ server.registerTool(
         education: [],
         skills: { technical: [] }
       };
-      
+
       const coverLetterFilePath = await generateDocument(
         coverLetterData,
         outputPath,
@@ -1175,21 +1187,21 @@ server.registerTool(
         OutputFormat.PDF
       );
       results.push(`📝 Cover letter saved to: ${coverLetterFilePath}`);
-      
+
       // 3. Generate Email Template (if email found)
       if (emailAddress) {
         const emailTemplate = generateEmailTemplate(
-          userProfile, 
-          parsedJobReq, 
-          emailAddress, 
-          EmailTemplateType.APPLICATION, 
+          userProfile,
+          parsedJobReq,
+          emailAddress,
+          EmailTemplateType.APPLICATION,
           managerName
         );
-        
+
         const emailContent = `Subject: ${emailTemplate.subject}\n\n${emailTemplate.body}\n\n--- ATTACHMENTS ---\n${emailTemplate.attachments.join(', ')}`;
-        
-        // Save email template as text file
-        const emailFilePath = path.join(outputPath, `${baseFileName}_Email_Template.txt`);
+
+        // Save email template as text file with safe path joining
+        const emailFilePath = safeJoinPath(outputPath, `${baseFileName}_Email_Template.txt`);
         await fs.writeFile(emailFilePath, emailContent, 'utf-8');
         results.push(`📧 Email template saved to: ${emailFilePath}`);
         results.push(`   To: ${emailAddress}`);

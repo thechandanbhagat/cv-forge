@@ -1,4 +1,5 @@
 import { UserProfile, ParsedJobRequirements } from "./job-parser.js";
+import escapeHtml from "escape-html";
 
 /**
  * Interface for cover letter data
@@ -301,12 +302,29 @@ export function formatCoverLetterAsHTML(coverLetter: CoverLetterData): string {
     day: 'numeric'
   });
 
+  // Escape all user-controlled data to prevent XSS
+  const escapedFullName = escapeHtml(coverLetter.personalInfo.fullName);
+  const escapedEmail = escapeHtml(coverLetter.personalInfo.email || '');
+  const escapedPhone = coverLetter.personalInfo.phone ? escapeHtml(coverLetter.personalInfo.phone) : '';
+  const escapedLocation = coverLetter.personalInfo.location ? escapeHtml(coverLetter.personalInfo.location) : '';
+  const escapedHiringManagerName = coverLetter.recipient.hiringManagerName ? escapeHtml(coverLetter.recipient.hiringManagerName) : '';
+  const escapedCompanyName = escapeHtml(coverLetter.recipient.companyName);
+  const escapedRecipientEmail = coverLetter.recipient.emailAddress ? escapeHtml(coverLetter.recipient.emailAddress) : '';
+  const escapedJobTitle = escapeHtml(coverLetter.recipient.jobTitle);
+  const escapedCurrentDate = escapeHtml(currentDate);
+
+  // Escape content paragraphs - preserve line breaks by replacing \n\n with paragraph breaks AFTER escaping
+  const escapedOpening = escapeHtml(coverLetter.content.opening).replace(/\n\n/g, '</p><p>');
+  const escapedBody = coverLetter.content.body.map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('');
+  const escapedClosing = escapeHtml(coverLetter.content.closing);
+  const escapedSignature = escapeHtml(coverLetter.signature);
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cover Letter - ${coverLetter.personalInfo.fullName}</title>
+    <title>Cover Letter - ${escapedFullName}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Calibri', sans-serif;
@@ -317,53 +335,53 @@ export function formatCoverLetterAsHTML(coverLetter: CoverLetterData): string {
             padding: 40px 20px;
             background: #fff;
         }
-        
+
         .header {
             text-align: left;
             margin-bottom: 30px;
         }
-        
+
         .header h1 {
             margin: 0;
             color: #2c3e50;
             font-size: 24px;
         }
-        
+
         .contact-info {
             margin: 10px 0;
             color: #7f8c8d;
         }
-        
+
         .date {
             margin: 20px 0;
             font-weight: 500;
         }
-        
+
         .recipient {
             margin: 20px 0;
             font-weight: 500;
         }
-        
+
         .subject {
             margin: 20px 0;
             font-weight: bold;
             color: #2c3e50;
         }
-        
+
         .content {
             margin: 30px 0;
         }
-        
+
         .content p {
             margin-bottom: 20px;
             text-align: justify;
         }
-        
+
         .signature {
             margin-top: 30px;
             white-space: pre-line;
         }
-        
+
         @media print {
             body {
                 padding: 0;
@@ -374,31 +392,31 @@ export function formatCoverLetterAsHTML(coverLetter: CoverLetterData): string {
 </head>
 <body>
     <div class="header">
-        <h1>${coverLetter.personalInfo.fullName}</h1>
+        <h1>${escapedFullName}</h1>
         <div class="contact-info">
-            ${coverLetter.personalInfo.email || ''}
-            ${coverLetter.personalInfo.phone ? ' | ' + coverLetter.personalInfo.phone : ''}
-            ${coverLetter.personalInfo.location ? ' | ' + coverLetter.personalInfo.location : ''}
+            ${escapedEmail}
+            ${escapedPhone ? ' | ' + escapedPhone : ''}
+            ${escapedLocation ? ' | ' + escapedLocation : ''}
         </div>
     </div>
-    
-    <div class="date">${currentDate}</div>
-    
+
+    <div class="date">${escapedCurrentDate}</div>
+
     <div class="recipient">
-        ${coverLetter.recipient.hiringManagerName || ''}${coverLetter.recipient.hiringManagerName ? '<br>' : ''}
-        ${coverLetter.recipient.companyName}
-        ${coverLetter.recipient.emailAddress ? '<br>' + coverLetter.recipient.emailAddress : ''}
+        ${escapedHiringManagerName}${escapedHiringManagerName ? '<br>' : ''}
+        ${escapedCompanyName}
+        ${escapedRecipientEmail ? '<br>' + escapedRecipientEmail : ''}
     </div>
-    
-    <div class="subject">Re: Application for ${coverLetter.recipient.jobTitle} Position</div>
-    
+
+    <div class="subject">Re: Application for ${escapedJobTitle} Position</div>
+
     <div class="content">
-        <p>${coverLetter.content.opening.replace(/\n\n/g, '</p><p>')}</p>
-        ${coverLetter.content.body.map(paragraph => `<p>${paragraph}</p>`).join('')}
-        <p>${coverLetter.content.closing}</p>
+        <p>${escapedOpening}</p>
+        ${escapedBody}
+        <p>${escapedClosing}</p>
     </div>
-    
-    <div class="signature">${coverLetter.signature}</div>
+
+    <div class="signature">${escapedSignature}</div>
 </body>
 </html>`;
 }

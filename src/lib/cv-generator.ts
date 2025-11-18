@@ -1,6 +1,13 @@
 import { UserProfile, ParsedJobRequirements } from "./job-parser.js";
 
 /**
+ * Escape special regex characters to prevent ReDoS attacks
+ */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Generate tailored CV content based on user profile and job requirements
  */
 export interface TailoredCV {
@@ -142,15 +149,17 @@ function prioritizeSkills(userSkills: string[], requiredSkills: string[]): strin
  */
 function tailorExperienceDescription(description: string, jobReq: ParsedJobRequirements): string {
   let tailored = description;
-  
+
   // Highlight technologies mentioned in job requirements
   jobReq.keySkills.forEach(skill => {
-    const regex = new RegExp(`\\b${skill}\\b`, 'gi');
+    // Escape special regex characters to prevent ReDoS attacks
+    const escapedSkill = escapeRegExp(skill);
+    const regex = new RegExp(`\\b${escapedSkill}\\b`, 'gi');
     if (tailored.match(regex)) {
       tailored = tailored.replace(regex, `**${skill}**`);
     }
   });
-  
+
   return tailored;
 }
 
@@ -159,15 +168,17 @@ function tailorExperienceDescription(description: string, jobReq: ParsedJobRequi
  */
 function tailorAchievement(achievement: string, jobReq: ParsedJobRequirements): string {
   let tailored = achievement;
-  
+
   // Highlight relevant keywords
   jobReq.keyWords.forEach(keyword => {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+    // Escape special regex characters to prevent ReDoS attacks
+    const escapedKeyword = escapeRegExp(keyword);
+    const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
     if (tailored.match(regex)) {
       tailored = tailored.replace(regex, `**${keyword}**`);
     }
   });
-  
+
   return tailored;
 }
 
