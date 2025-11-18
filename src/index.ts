@@ -34,6 +34,7 @@ import {
   type EmailTemplateData
 } from "./lib/email-template-generator.js";
 import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./lib/path-utils.js";
+import { sanitizeErrorMessage, createSafeErrorResponse } from "./lib/error-utils.js";
 
 /**
  * CV Maker MCP Server
@@ -108,14 +109,7 @@ server.registerTool(
         ]
       };
     } catch (error) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Error parsing job requirements: ${error instanceof Error ? error.message : 'Unknown error'}`
-          }
-        ]
-      };
+      return createSafeErrorResponse(error, 'parse_job');
     }
   }
 );
@@ -152,14 +146,7 @@ server.registerTool(
         ]
       };
     } catch (error) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Error generating CV data: ${error instanceof Error ? error.message : 'Unknown error'}`
-          }
-        ]
-      };
+      return createSafeErrorResponse(error, 'generate_cv');
     }
   }
 );
@@ -223,14 +210,7 @@ server.registerTool(
         ]
       };
     } catch (error) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Error generating and saving PDF: ${error instanceof Error ? error.message : 'Unknown error'}`
-          }
-        ]
-      };
+      return createSafeErrorResponse(error, 'save_pdf');
     }
   }
 );
@@ -274,14 +254,7 @@ server.registerTool(
         ]
       };
     } catch (error) {
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Error saving CV: ${error instanceof Error ? error.message : 'Unknown error'}`
-          }
-        ]
-      };
+      return createSafeErrorResponse(error, 'save_file');
     }
   }
 );

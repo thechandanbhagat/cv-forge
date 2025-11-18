@@ -1,61 +1,61 @@
 import { z } from "zod";
 
 /**
- * Schema for job requirements input
+ * Schema for job requirements input with enhanced validation
  */
 export const JobRequirementsSchema = z.object({
-  jobTitle: z.string().describe("The job title/position"),
-  company: z.string().describe("Company name"),
-  jobDescription: z.string().describe("Full job description text"),
-  requirements: z.array(z.string()).optional().describe("Specific requirements if separated"),
-  preferredSkills: z.array(z.string()).optional().describe("Preferred skills if separated"),
-  location: z.string().optional().describe("Job location"),
-  salaryRange: z.string().optional().describe("Salary range if provided")
+  jobTitle: z.string().min(1).max(200).describe("The job title/position"),
+  company: z.string().min(1).max(200).describe("Company name"),
+  jobDescription: z.string().min(1).max(50000).describe("Full job description text"),
+  requirements: z.array(z.string().max(1000)).max(100).optional().describe("Specific requirements if separated"),
+  preferredSkills: z.array(z.string().max(200)).max(100).optional().describe("Preferred skills if separated"),
+  location: z.string().max(200).optional().describe("Job location"),
+  salaryRange: z.string().max(100).optional().describe("Salary range if provided")
 });
 
 /**
- * Schema for user profile data
+ * Schema for user profile data with enhanced validation
  */
 export const UserProfileSchema = z.object({
   personalInfo: z.object({
-    fullName: z.string(),
-    email: z.string(),
-    phone: z.string().optional(),
-    location: z.string().optional(),
-    linkedIn: z.string().optional(),
-    github: z.string().optional(),
-    website: z.string().optional()
+    fullName: z.string().min(1).max(200),
+    email: z.string().email("Invalid email format").max(254),
+    phone: z.string().max(50).regex(/^[\d\s\-\+\(\)\.]+$/, "Invalid phone number format").optional(),
+    location: z.string().max(200).optional(),
+    linkedIn: z.string().url("Invalid LinkedIn URL").max(500).optional().or(z.literal('')),
+    github: z.string().url("Invalid GitHub URL").max(500).optional().or(z.literal('')),
+    website: z.string().url("Invalid website URL").max(500).optional().or(z.literal(''))
   }),
-  summary: z.string().describe("Professional summary"),
+  summary: z.string().min(1).max(5000).describe("Professional summary"),
   experience: z.array(z.object({
-    jobTitle: z.string(),
-    company: z.string(),
-    location: z.string().optional(),
-    startDate: z.string(),
-    endDate: z.string().optional(),
-    description: z.string(),
-    achievements: z.array(z.string()).optional()
-  })),
+    jobTitle: z.string().min(1).max(200),
+    company: z.string().min(1).max(200),
+    location: z.string().max(200).optional(),
+    startDate: z.string().max(50),
+    endDate: z.string().max(50).optional(),
+    description: z.string().max(5000),
+    achievements: z.array(z.string().max(1000)).max(50).optional()
+  })).max(50),
   education: z.array(z.object({
-    degree: z.string(),
-    institution: z.string(),
-    location: z.string().optional(),
-    graduationYear: z.string(),
-    gpa: z.string().optional(),
-    honors: z.array(z.string()).optional()
-  })),
+    degree: z.string().min(1).max(200),
+    institution: z.string().min(1).max(200),
+    location: z.string().max(200).optional(),
+    graduationYear: z.string().max(10),
+    gpa: z.string().max(20).optional(),
+    honors: z.array(z.string().max(500)).max(20).optional()
+  })).max(20),
   skills: z.object({
-    technical: z.array(z.string()),
-    soft: z.array(z.string()).optional(),
-    languages: z.array(z.string()).optional(),
-    certifications: z.array(z.string()).optional()
+    technical: z.array(z.string().max(100)).max(100),
+    soft: z.array(z.string().max(100)).max(50).optional(),
+    languages: z.array(z.string().max(100)).max(30).optional(),
+    certifications: z.array(z.string().max(200)).max(50).optional()
   }),
   projects: z.array(z.object({
-    name: z.string(),
-    description: z.string(),
-    technologies: z.array(z.string()),
-    url: z.string().optional()
-  })).optional()
+    name: z.string().min(1).max(200),
+    description: z.string().max(5000),
+    technologies: z.array(z.string().max(100)).max(50),
+    url: z.string().url("Invalid project URL").max(500).optional().or(z.literal(''))
+  })).max(50).optional()
 });
 
 export type JobRequirements = z.infer<typeof JobRequirementsSchema>;

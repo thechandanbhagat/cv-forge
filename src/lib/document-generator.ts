@@ -6,6 +6,7 @@ import os from "os";
 import crypto from "crypto";
 import escapeHtml from "escape-html";
 import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./path-utils.js";
+import { sanitizeErrorMessage } from "./error-utils.js";
 
 /**
  * Allowed PDF page sizes to prevent injection attacks
@@ -514,19 +515,25 @@ export async function generateDocument(
         
         // Verify the PDF was created
         if (!pdf || !pdf.filename) {
-          throw new Error(`PDF generation failed - no output file created`);
+          // Log internally but throw generic message
+          console.error('[ERROR] PDF generation failed - no output file created');
+          throw new Error('PDF generation failed');
         }
-        
+
         // Verify file exists
         try {
           await fs.access(filePath);
           return filePath;
         } catch (accessError) {
-          throw new Error(`PDF file was not created at ${filePath}`);
+          // Log internally with path, but throw generic message
+          console.error(`[ERROR] PDF file was not created at: ${filePath}`);
+          throw new Error('PDF file creation failed');
         }
-        
+
       } catch (error) {
-        throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Log full error internally, throw sanitized message
+        const sanitized = sanitizeErrorMessage(error, 'PDF generation');
+        throw new Error(sanitized);
       }
     }
     
