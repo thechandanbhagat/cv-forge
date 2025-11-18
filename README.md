@@ -17,6 +17,45 @@ An intelligent MCP (Model Context Protocol) server that analyzes job postings an
 - **ATS-Friendly**: Optimized for Applicant Tracking Systems with proper keyword placement
 - **Smart Contact Extraction**: Automatically extracts email addresses and hiring manager names from job descriptions
 
+## Security Features
+
+CV Forge implements comprehensive security measures to protect your sensitive data and prevent common vulnerabilities:
+
+### Input Validation and Sanitization
+- **Comprehensive Input Validation**: All user inputs are validated using Zod schemas with strict length limits and format requirements
+- **Email Validation**: Proper email format validation to prevent malformed addresses
+- **URL Validation**: LinkedIn, GitHub, and website URLs are validated for correct format
+- **Phone Number Validation**: Phone numbers are validated against allowed character patterns
+- **Length Constraints**: Maximum lengths enforced on all string inputs to prevent denial-of-service attacks
+- **Array Size Limits**: Maximum array sizes enforced to prevent resource exhaustion
+
+### Output Security
+- **XSS Prevention**: All user-controlled data is properly escaped before HTML rendering using industry-standard escaping libraries
+- **Path Traversal Protection**: File paths are validated and sanitized to prevent unauthorized file system access
+- **Filename Sanitization**: Filenames are sanitized to remove directory traversal sequences and invalid characters
+- **Safe Path Joining**: All file path operations use secure path joining to prevent directory escape
+
+### Data Protection
+- **CRLF Injection Prevention**: Email addresses and contact information are sanitized to prevent email header injection attacks
+- **HTML Injection Prevention**: Markdown parser configured to disable raw HTML pass-through
+- **ReDoS Protection**: Regular expressions are constructed with escaped special characters to prevent regex denial-of-service attacks
+- **Secure Temporary Files**: Temporary files use cryptographically random names to prevent race condition attacks
+
+### PDF Generation Security
+- **Page Size Whitelist**: PDF page sizes are restricted to a whitelist of safe values (A4, A3, A5, Letter, Legal, Tabloid)
+- **Margin Validation**: PDF margins are validated for proper format and reasonable bounds
+- **Parameter Sanitization**: All PDF generation parameters are validated to prevent injection attacks
+
+### Error Handling
+- **Sanitized Error Messages**: Error messages are sanitized to prevent information disclosure
+- **Internal Logging**: Detailed errors are logged server-side while generic messages are shown to users
+- **No Path Exposure**: File paths and system information are never exposed in user-facing error messages
+
+### Best Practices
+- **No Sensitive Data Logging**: Environment variables and sensitive configuration are never logged
+- **Secure Defaults**: All security features are enabled by default with no configuration required
+- **Defense in Depth**: Multiple layers of security validation are applied throughout the application
+
 ## Installation
 
 ### Via npm (Recommended)
