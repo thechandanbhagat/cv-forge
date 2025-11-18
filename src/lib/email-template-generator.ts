@@ -1,6 +1,18 @@
 import { UserProfile, ParsedJobRequirements } from "./job-parser.js";
 
 /**
+ * Sanitize string to prevent CRLF injection in email headers/content
+ * Removes carriage return (\r) and line feed (\n) characters
+ */
+function sanitizeCRLF(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+  // Remove all CR and LF characters to prevent header injection
+  return text.replace(/[\r\n]/g, '');
+}
+
+/**
  * Interface for email template data
  */
 export interface EmailTemplateData {
@@ -40,18 +52,19 @@ export function generateEmailTemplate(
 ): EmailTemplateData {
   const subject = generateSubject(jobRequirements, templateType);
   const body = generateEmailBody(userProfile, jobRequirements, templateType, hiringManagerName);
-  
+
+  // SECURITY: Sanitize all fields to prevent CRLF injection
   return {
     sender: {
-      name: userProfile.personalInfo.fullName,
-      email: userProfile.personalInfo.email
+      name: sanitizeCRLF(userProfile.personalInfo.fullName),
+      email: sanitizeCRLF(userProfile.personalInfo.email)
     },
     recipient: {
-      email: recipientEmail,
-      name: hiringManagerName,
-      company: jobRequirements.company
+      email: sanitizeCRLF(recipientEmail),
+      name: hiringManagerName ? sanitizeCRLF(hiringManagerName) : undefined,
+      company: sanitizeCRLF(jobRequirements.company)
     },
-    subject,
+    subject: sanitizeCRLF(subject),
     body,
     attachments: ["CV.pdf", "Cover_Letter.pdf"]
   };
@@ -131,7 +144,12 @@ function generateApplicationEmailBody(
   ).slice(0, 4);
 
   const totalExperience = calculateTotalExperience(userProfile.experience);
-  
+
+  // SECURITY: Sanitize user-controlled data to prevent CRLF injection
+  const sanitizedEmail = sanitizeCRLF(userProfile.personalInfo.email);
+  const sanitizedPhone = userProfile.personalInfo.phone ? sanitizeCRLF(userProfile.personalInfo.phone) : '';
+  const sanitizedFullName = sanitizeCRLF(fullName);
+
   return `${greeting},
 
 I hope this email finds you well. I am writing to express my strong interest in the ${jobTitle} position at ${company}. After reviewing the job requirements, I am confident that my background and skills align perfectly with what you are seeking.
@@ -140,14 +158,14 @@ With ${totalExperience} years of professional experience, I bring expertise in $
 
 I have attached my CV and cover letter for your review. These documents provide detailed information about my experience, achievements, and how I can contribute to ${company}'s continued success.
 
-I would welcome the opportunity to discuss how my skills and enthusiasm can benefit your team. Please feel free to contact me at ${userProfile.personalInfo.email} or ${userProfile.personalInfo.phone || 'via email'} to schedule a conversation.
+I would welcome the opportunity to discuss how my skills and enthusiasm can benefit your team. Please feel free to contact me at ${sanitizedEmail} or ${sanitizedPhone || 'via email'} to schedule a conversation.
 
 Thank you for considering my application. I look forward to hearing from you soon.
 
 Best regards,
-${fullName}
-${userProfile.personalInfo.email}
-${userProfile.personalInfo.phone || ''}`;
+${sanitizedFullName}
+${sanitizedEmail}
+${sanitizedPhone}`;
 }
 
 /**
@@ -160,10 +178,15 @@ function generateFollowUpEmailBody(
 ): string {
   const { jobTitle, company } = jobRequirements;
   const { fullName } = userProfile.personalInfo;
-  
+
+  // SECURITY: Sanitize user-controlled data to prevent CRLF injection
+  const sanitizedEmail = sanitizeCRLF(userProfile.personalInfo.email);
+  const sanitizedPhone = userProfile.personalInfo.phone ? sanitizeCRLF(userProfile.personalInfo.phone) : '';
+  const sanitizedFullName = sanitizeCRLF(fullName);
+
   return `${greeting},
 
-I hope you are doing well. I wanted to follow up on my application for the ${jobTitle} position at ${company}, which I submitted on [DATE]. 
+I hope you are doing well. I wanted to follow up on my application for the ${jobTitle} position at ${company}, which I submitted on [DATE].
 
 I remain very interested in this opportunity and believe my skills and experience would be a valuable addition to your team. If you need any additional information or would like to schedule an interview, please don't hesitate to reach out.
 
@@ -172,9 +195,9 @@ I understand that you likely receive many applications, and I appreciate the tim
 Thank you for your time and consideration.
 
 Best regards,
-${fullName}
-${userProfile.personalInfo.email}
-${userProfile.personalInfo.phone || ''}`;
+${sanitizedFullName}
+${sanitizedEmail}
+${sanitizedPhone}`;
 }
 
 /**
@@ -187,7 +210,12 @@ function generateInquiryEmailBody(
 ): string {
   const { jobTitle, company } = jobRequirements;
   const { fullName } = userProfile.personalInfo;
-  
+
+  // SECURITY: Sanitize user-controlled data to prevent CRLF injection
+  const sanitizedEmail = sanitizeCRLF(userProfile.personalInfo.email);
+  const sanitizedPhone = userProfile.personalInfo.phone ? sanitizeCRLF(userProfile.personalInfo.phone) : '';
+  const sanitizedFullName = sanitizeCRLF(fullName);
+
   return `${greeting},
 
 I hope this email finds you well. I am reaching out to inquire about the ${jobTitle} position at ${company}. I am very interested in this opportunity and would like to learn more about the role and your team.
@@ -199,9 +227,9 @@ Would it be possible to schedule a brief conversation to learn more about this p
 Thank you for your time, and I look forward to hearing from you.
 
 Best regards,
-${fullName}
-${userProfile.personalInfo.email}
-${userProfile.personalInfo.phone || ''}`;
+${sanitizedFullName}
+${sanitizedEmail}
+${sanitizedPhone}`;
 }
 
 /**
@@ -214,7 +242,12 @@ function generateThankYouEmailBody(
 ): string {
   const { jobTitle, company } = jobRequirements;
   const { fullName } = userProfile.personalInfo;
-  
+
+  // SECURITY: Sanitize user-controlled data to prevent CRLF injection
+  const sanitizedEmail = sanitizeCRLF(userProfile.personalInfo.email);
+  const sanitizedPhone = userProfile.personalInfo.phone ? sanitizeCRLF(userProfile.personalInfo.phone) : '';
+  const sanitizedFullName = sanitizeCRLF(fullName);
+
   return `${greeting},
 
 Thank you for taking the time to interview me for the ${jobTitle} position at ${company} today. I enjoyed our conversation and learning more about the role and your team's goals.
@@ -226,9 +259,9 @@ If you need any additional information or references, please don't hesitate to r
 Thank you again for your time and consideration.
 
 Best regards,
-${fullName}
-${userProfile.personalInfo.email}
-${userProfile.personalInfo.phone || ''}`;
+${sanitizedFullName}
+${sanitizedEmail}
+${sanitizedPhone}`;
 }
 
 /**

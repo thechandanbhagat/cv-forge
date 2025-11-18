@@ -5,6 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { promises as fs } from "fs";
 import path from "path";
+import crypto from "crypto";
 
 import { 
   JobRequirementsSchema, 
@@ -980,9 +981,10 @@ server.registerTool(
       
       // Convert to HTML for PDF generation
       const htmlContent = formatCoverLetterAsHTML(coverLetter);
-      
-      // Create a temporary HTML file for PDF conversion
-      const tempHtmlPath = path.join(require('os').tmpdir(), `cover-letter-${Date.now()}.html`);
+
+      // SECURITY: Create a temporary HTML file with cryptographically random name
+      const randomSuffix = crypto.randomBytes(16).toString('hex');
+      const tempHtmlPath = path.join(require('os').tmpdir(), `cover-letter-${randomSuffix}.html`);
       await fs.writeFile(tempHtmlPath, htmlContent, 'utf-8');
       
       // Prepare PDF options

@@ -3,8 +3,54 @@ import { mdToPdf } from "md-to-pdf";
 import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
+import crypto from "crypto";
 import escapeHtml from "escape-html";
 import { sanitizeFileName, validateAndNormalizePath, safeJoinPath, ensureDirectoryExists } from "./path-utils.js";
+
+/**
+ * Allowed PDF page sizes to prevent injection attacks
+ */
+const ALLOWED_PAGE_SIZES = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Tabloid'] as const;
+type AllowedPageSize = typeof ALLOWED_PAGE_SIZES[number];
+
+/**
+ * Validate and sanitize PDF page size
+ */
+function validatePageSize(pageSize?: string): AllowedPageSize {
+  if (!pageSize) {
+    return 'A4';
+  }
+  const normalized = pageSize.toUpperCase();
+  if (ALLOWED_PAGE_SIZES.map(s => s.toUpperCase()).includes(normalized)) {
+    return ALLOWED_PAGE_SIZES.find(s => s.toUpperCase() === normalized) as AllowedPageSize;
+  }
+  console.error(`[SECURITY] Invalid page size "${pageSize}" provided, defaulting to A4`);
+  return 'A4';
+}
+
+/**
+ * Validate and sanitize margin value
+ * Only allows numeric values with valid units (mm, cm, in, px, pt)
+ */
+function validateMargin(margin?: string, defaultValue: string = '10mm'): string {
+  if (!margin) {
+    return defaultValue;
+  }
+  // Match pattern: number + optional decimal + valid unit
+  const validMarginPattern = /^(\d+(\.\d+)?)(mm|cm|in|px|pt)$/i;
+  if (validMarginPattern.test(margin)) {
+    // Parse and check reasonable bounds (between 0 and 100 of any unit)
+    const match = margin.match(validMarginPattern);
+    if (match) {
+      const value = parseFloat(match[1]);
+      if (value >= 0 && value <= 100) {
+        return margin.toLowerCase();
+      }
+    }
+  }
+  console.error(`[SECURITY] Invalid margin "${margin}" provided, defaulting to ${defaultValue}`);
+  return defaultValue;
+}
 
 export interface CVData {
   personalInfo: {
@@ -347,9 +393,10 @@ export async function generateDocument(
       try {
         // Directory already ensured to exist above
         console.error(`[DEBUG document-generator] Using validated directory: ${validatedOutputPath}`);
-        
-        // Create a temporary CSS file
-        const tempCssPath = path.join(os.tmpdir(), `cv-style-${Date.now()}.css`);
+
+        // SECURITY: Create a temporary CSS file with cryptographically random name
+        const randomSuffix = crypto.randomBytes(16).toString('hex');
+        const tempCssPath = path.join(os.tmpdir(), `cv-style-${randomSuffix}.css`);
         
         // Get font configuration from environment variables
         // MS Word 10pt ≈ 13.33px, 9pt ≈ 12px
@@ -426,18 +473,20 @@ export async function generateDocument(
         await fs.writeFile(tempCssPath, cssContent, 'utf-8');
         
         console.error(`[DEBUG document-generator] About to call mdToPdf with dest: ${filePath}`);
-        
-        // Get page size and margins from options or environment variables
-        const pageSize = pdfOptions?.pageSize || process.env.PDF_PAGE_SIZE || 'A4';
+
+        // SECURITY: Validate and sanitize page size and margins to prevent injection
+        const pageSize = validatePageSize(
+          pdfOptions?.pageSize || process.env.PDF_PAGE_SIZE
+        );
         const margins = {
-          top: pdfOptions?.margins?.top || process.env.PDF_MARGIN_TOP || '10mm',
-          right: pdfOptions?.margins?.right || process.env.PDF_MARGIN_RIGHT || '10mm',
-          bottom: pdfOptions?.margins?.bottom || process.env.PDF_MARGIN_BOTTOM || '10mm',
-          left: pdfOptions?.margins?.left || process.env.PDF_MARGIN_LEFT || '10mm'
+          top: validateMargin(pdfOptions?.margins?.top || process.env.PDF_MARGIN_TOP, '10mm'),
+          right: validateMargin(pdfOptions?.margins?.right || process.env.PDF_MARGIN_RIGHT, '10mm'),
+          bottom: validateMargin(pdfOptions?.margins?.bottom || process.env.PDF_MARGIN_BOTTOM, '10mm'),
+          left: validateMargin(pdfOptions?.margins?.left || process.env.PDF_MARGIN_LEFT, '10mm')
         };
 
-        console.error(`[DEBUG document-generator] Using page size: ${pageSize}`);
-        console.error(`[DEBUG document-generator] Using margins: ${JSON.stringify(margins)}`);
+        console.error(`[DEBUG document-generator] Using validated page size: ${pageSize}`);
+        console.error(`[DEBUG document-generator] Using validated margins: ${JSON.stringify(margins)}`);
 
         // Generate PDF with the temporary CSS file
         const pdf = await mdToPdf(
