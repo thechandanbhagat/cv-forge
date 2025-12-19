@@ -17,6 +17,10 @@ An intelligent MCP (Model Context Protocol) server that analyzes job postings an
 - **ATS-Friendly**: Optimized for Applicant Tracking Systems with proper keyword placement
 - **Smart Contact Extraction**: Automatically extracts email addresses and hiring manager names from job descriptions
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=thechandanbhagat/cv-forge&type=date&legend=top-left)](https://www.star-history.com/#thechandanbhagat/cv-forge&type=date&legend=top-left)
+
 ## Installation
 
 ### Via npm (Recommended)
